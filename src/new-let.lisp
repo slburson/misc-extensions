@@ -172,7 +172,7 @@ applies to the inner one."
 						    (cdr decls))
 				   . ,body))
 			       (list (car decls))))
-		      (t (values body decls)))))
+		      (t (values `((progn . ,body)) decls)))))
     (multiple-value-bind (this-level-single this-level-multiple next-level)
 	(split-level clauses nil nil nil)
       (expand-1 this-level-single this-level-multiple next-level body decls))))
