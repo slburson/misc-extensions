@@ -6,8 +6,8 @@
 (in-package :new-let)
 
 (defmacro fn (lambda-list &body body)
-  "A variant of the `lambda' with two features: (a) the name is shorter
-and (b) it automatically generates an `ignore' declaration for any parameter
+  "A variant of `lambda' with two features: (a) the name is shorter, and (b)
+it automatically generates an `ignore' declaration for any parameter
 whose name begins with an underscore.
 Note that
   #'(fn ...)
