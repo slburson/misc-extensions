@@ -262,7 +262,9 @@
 			    `(,(car fn-rec) (&rest args)
 			       (apply (svref ,instance-var ,(cadr fn-rec)) args)))
 			  (context-bind-fns ctxt))
-	     (declare (inline . ,(mapcar #'car (context-bind-fns ctxt))))
+	     ,(let ((fns (mapcar #'car (context-bind-fns ctxt))))
+		`(declare (inline . ,fns)
+		          (ignorable . ,(mapcar (lambda (x) `#',x) fns))))
 	     . ,body))))))
 
 
