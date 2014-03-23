@@ -561,6 +561,11 @@ there is one iteration for each two elements."
     (:values 2 #'(lambda (plist) (values (car plist) (cadr plist))))
     #'cddr))
 
+(def-gmap-arg-type :tails (list)
+  "Yields the successive tails (cdrs) of `list', starting with `list' itself."
+  `(,list
+    #'endp nil #'cdr))
+
 ;;; If `incr' is +1 or -1, then swapping `start' and `stop' and negating `incr'
 ;;; generates the same sequence in reverse order.  This isn't true, though, in
 ;;; general.  Should it be?
