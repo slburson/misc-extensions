@@ -289,9 +289,11 @@ by the LET is extended to include the consequent expressions.  For example:
          (baz x)))
 
 Here the X in (BAZ X) is the one bound to the result of (FOO)."
-  (cl:let ((block-nm (gensym)))
-    `(block ,block-nm
-       . ,(mapcar #'(lambda (c) (bcond-clause c block-nm)) clauses))))
+  (when clauses
+    (cl:let ((block-nm (gensym)))
+      `(block ,block-nm
+         ,@(mapcar #'(lambda (c) (bcond-clause c block-nm)) (butlast clauses))
+         ,(bcond-last-clause (car (last clauses)) block-nm)))))
 
 ;;; Cause our version of COND to be indented correctly in Zmacs.  (The variable is
 ;;; in the Genera 8.2 Zmacs; I'm guessing it's in the LMITI system too -- if it
@@ -309,9 +311,11 @@ by the LET is extended to include the consequent expressions.  For example:
          (baz x)))
 
 Here the X in (BAZ X) is the one bound to the result of (FOO)."
-  (cl:let ((block-nm (gensym)))
-    `(block ,block-nm
-       . ,(mapcar #'(lambda (c) (bcond-clause c block-nm)) clauses))))
+  (when clauses
+    (cl:let ((block-nm (gensym)))
+      `(block ,block-nm
+         ,@(mapcar #'(lambda (c) (bcond-clause c block-nm)) (butlast clauses))
+         ,(bcond-last-clause (car (last clauses)) block-nm)))))
 
 (defun bcond-clause (clause block-nm)
   (cl:cond ((not (listp clause))
@@ -325,6 +329,15 @@ Here the X in (BAZ X) is the one bound to the result of (FOO)."
 				  (cdr clause) block-nm))
 	     (t
 	      (bcond-build-clause nil nil (car clause) (cdr clause) block-nm))))
+
+(defun bcond-last-clause (clause block-nm)
+  "Special case for the last clause.  If it is the common case of (T ...)
+(or similar) do not generate a RETURN-FROM.  While the latter would be correct,
+the cleaner code works better with mutation testing."
+  (if (and (consp clause)
+           (typep (car clause) '(or (eql t) keyword (and (not symbol) (not cons)))))
+      `(progn . ,(cdr clause))
+      (bcond-clause clause block-nm)))
 
 (defun bcond-build-clause (let-sym let-clauses pred consequents block-nm)
   (cl:let ((body (if consequents
