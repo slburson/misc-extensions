@@ -1,6 +1,10 @@
 ;;; -*- Lisp -*-
 
 (defsystem Misc-Extensions
+  :description "The GMap iteration macro, plus a few other useful macros."
+  :author "Scott L. Burson <Scott@sympoiesis.com>"
+  :version "4.0.1"
+  :license "Public domain"
   :serial t
   :components ((:module "src"
 		:serial t
