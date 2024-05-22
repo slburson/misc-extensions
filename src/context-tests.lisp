@@ -41,7 +41,6 @@ result."
       (unless (equal result '(22 16 38 17 (22 16 38 17 (267054))))
 	(error "test-context-1 failed: ~S" result)))))
 
-(test-context-1)
 
 (defcontext context-2 (x)
   "Just to test macros."
@@ -56,7 +55,11 @@ result."
     (unless (equal result '((x 37) (x 37)))
       (error "test-context-2 failed: ~S" result))))
 
-(test-context-2)
+
+(defun test-contexts ()
+  (test-context-1)
+  (test-context-2))
+
 
 ;;; Test context redefinition that omits names.
 #|| Doesn't work compiled (at least in SBCL); have to do it manually.
