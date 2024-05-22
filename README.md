@@ -5,7 +5,7 @@ The Misc-Extensions system provides several macros that I like to use.
 ## 1. Macro `nlet`
 
 Macro `nlet` is an upward-compatible replacement for `cl:let` that generalizes
-`let`, `let*`, and `multiple-value-bind`.  it can be imported as `let`,
+`let`, `let*`, and `multiple-value-bind`.  It can be imported as `let`,
 shadowing `cl:let` — this is how I have used it for years — but if that seems
 too radical, the same macro can be imported as `nlet`.  For clarity, I will
 refer to it as `nlet` here.
@@ -157,8 +157,8 @@ For a small collection of examples, look at `test-new-syntax' in `tests.lisp'.
 
 The set of argument types is extensible.  Thus you can adapt `gmap` to other
 kinds of data structures over which you would like to iterate.  For details of
-how to do this, see `def-gmap-arg-type` in the source file; the predefined types
-will serve as examples.
+how to do this, see `def-arg-type` in the source file, and study the existing
+definitions.
 
 An argument type can explicitly indicate that it supplies more than one argument
 to the function being mapped.  That function must have one or more additional
@@ -175,14 +175,14 @@ parameters at the corresponding point in its parameter list.  For example:
 Here `x` and `y` receive the pairs of the alist, and `z` receives the elements
 of the list.
 
-####. 2.1.1. Predefined argument types
+#### 2.1.1. Predefined argument types
 
 - `constant` _value_: Yields `value` on every iteration.
 
 - `list` _list_: Yields successive elements of `list`.
 
 - `improper-list` _list_: Yields the successive elements of `list`, which may be
-  improper; any non-consp tail terminates the iteration.
+  improper; any non-cons tail terminates the iteration.
 
 - `alist` _alist_: Yields, as two values, the successive pairs of `alist`.
 
@@ -256,8 +256,8 @@ treats collecting the results and summing them, for example, as instances of the
 same pattern.
 
 As with the argument types, the set of result types is extensible.  For details
-of how to do this, see `def-gmap-res-type` in the source file, and study the
-existing calls.
+of how to do this, see `def-result-type` in the source file, and study the
+existing definitions.
 
 A result type can explicitly indicate that it expects the function being mapped
 to return multiple values, which it can turn into multiple arguments to a
@@ -400,7 +400,7 @@ the parameters, moreover, you'll want to add a `(declare (ignore ...))` for the
 unused ones, which adds to the verbosity.  The `fn` macro helps with both
 annoyances.  Obviously, its name is quite short.  (Those willing to set foot on
 the slippery slope of Unicode could use `λ`, of course, but I haven't been
-willing to go there yet, lest I ultimately wind up using emojis for all my
+willing to go there yet, lest I ultimately wind up using cat emojis for all my
 variable names.)  And, it automatically inserts an `ignore` declaration for
 every parameter whose name begins with an underscore.
 
