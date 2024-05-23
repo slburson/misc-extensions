@@ -62,13 +62,13 @@
 ;;; package.  This can be done by including the following option clause in
 ;;; your DEFPACKAGE form:
 ;;;
-;;;    (:shadowing-import-from "NEW-LET" "LET" "COND")
+;;;    (:shadowing-import-from :new-let #:let #:cond)
 ;;;
 ;;; If for some reason you don't want to shadow these, you can access this
 ;;; version of LET as NLET, and this version of COND as BCOND (the "B" is
 ;;; for "binding"), by using the following DEFPACKAGE option instead:
 ;;;
-;;;    (:import-from "NEW-LET" "NLET" "BCOND")
+;;;    (:import-from :new-let #:nlet #:bcond)
 ;;;
 ;;; Enjoy!
 ;;; Scott L. Burson   2/18/2005
@@ -240,7 +240,7 @@ second value is `body' with the declarations stripped off."
 		(process-vars (cdr decl) (list 'type (car decl)) bd-alist free vars))
 	       ((eq (car decl) 'type)
 		(process-vars (cddr decl) (list 'type (cadr decl)) bd-alist free vars))
-	       ((eq (car decl) 'special)
+	       ((member (car decl) '(special dynamic-extent))
 		(process-vars (cdr decl) (list (car decl)) bd-alist free vars))
 	       (t (values bd-alist (cons decl free)))))
 	   (process-vars (decl-vars decl-specs bd-alist free vars)
