@@ -437,7 +437,7 @@ Macro `isetq` &rest _var-val-pairs_:
 Some implementations, notably SBCL, issue a warning if you use `setq` to set a
 new global variable in the REPL.  (I guess they want you to use `defvar` first.)
 `isetq` prevents this warning, using the same trick `deflex` uses to declare a
-global lexical.  `isetq` is *_not recommended for use in programs_*.
+global lexical.  `isetq` is ***not recommended for use in programs***.
 
 ## 7. "Reversed" function binding forms
 
