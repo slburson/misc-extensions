@@ -230,7 +230,7 @@
 				       fns)
 			     ,instance-var))))))))
 	    (let ((,ctxt-var ,(make-load-form ctxt)))
-	      (setf (context-parameter-list ,ctxt) ',parameter-list)
+	      (setf (context-parameter-list ,ctxt-var) ',parameter-list)
 	      (setf (context-bind-vars ,ctxt-var) ',vars)
 	      (setf (context-bind-fns ,ctxt-var) ',fns)
 	      (setf (context-all-vars ,ctxt-var) ',all-vars)
