@@ -399,10 +399,11 @@ can be a significant fraction of the total.  If the body doesn't reference all
 the parameters, moreover, you'll want to add a `(declare (ignore ...))` for the
 unused ones, which adds to the verbosity.  The `fn` macro helps with both
 annoyances.  Obviously, its name is quite short.  (Those willing to set foot on
-the slippery slope of Unicode could use `λ`, of course, but I haven't been
-willing to go there yet, lest I ultimately wind up using cat emojis for all my
-variable names.)  And, it automatically inserts an `ignore` declaration for
-every parameter whose name begins with an underscore.
+the slippery slope of Unicode could use `λ`, of course, but I've been afraid to
+go there yet, lest my code wind up as an unintelligible mass of obscure
+mathematical symbols and cat emojis.)  And, you can use either a bare `_` or a
+name beginning with `_` as a parameter name, to indicate an ignored parameter;
+`fn` automatically inserts the required `ignore` declaration.
 
 One catch, though, is that if you inadvertently write `#'(fn ...)`, you will get
 a probably-unintelligible compiler error.  Just delete the `#'`.  (Lisp Machine
