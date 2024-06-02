@@ -341,13 +341,21 @@ with no effect on the global one."
        (define-symbol-macro ,var (symbol-value ',var)))))
 
 ;;; Also related only tangentially... but I want to put it somewhere.
-(defmacro isetq (var val)
+(defmacro isetq (&rest var-val-pairs)
   "\"Interactive `setq'\": can be used on previously-undeclared variables
 without getting ugly warnings or causing the variable to be declared special.
 Not to be used in code!!!"
-  (unless (symbolp var)
-    (error "~A requires a symbol, not: ~S" 'isetq var))
-  `(eval-when (:execute)
-     (when (eq (macroexpand-1 ',var) ',var)
-       (define-symbol-macro ,var (symbol-value ',var)))
-     (setq ,var ,val)))
+  (do ((var-val-pairs var-val-pairs (cddr var-val-pairs))
+       (result nil))
+      ((null var-val-pairs)
+       `(progn . ,(nreverse result)))
+    (let ((var (car var-val-pairs))
+	  (val (if (cdr var-val-pairs) (cadr var-val-pairs)
+		 (error "Odd number of arguments"))))
+      (unless (symbolp var)
+	(error "~A requires a symbol, not: ~S" 'isetq var))
+      (push `(eval-when (:execute)
+	       (when (eq (macroexpand-1 ',var) ',var)
+		 (define-symbol-macro ,var (symbol-value ',var)))
+	       (setf (symbol-value ',var) ,val))
+	    result))))
