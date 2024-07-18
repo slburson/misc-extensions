@@ -728,21 +728,47 @@ otherwise, returns false.  Does not work as an operand of `:values'."
   '(0 #'(lambda (n new)
 	  (if new (1+ n) n))))
 
-(def-gmap-res-type max (&key filterp)
-  "Returns the maximum of the values, optionally filtered by `filterp'; or `nil'
-if there are none."
-  `(nil
-    #'(lambda (old new) (if (null old) new (max old new)))
-    nil
-    ,filterp))
+(def-gmap-res-type max (&key filterp key)
+  "Optionally filters the values by `filterp', then returns the maximum, or if `key'
+is supplied, tne first value with the maximum key; or `nil' if no values were supplied
+\(or survived filtering)."
+  (if key
+      (let ((key-val-var (gensym "KEY-VAL-")))
+	`(nil
+	  #'(lambda (old new) (let ((new-key-val ,(gmap>funcall key 'new)))
+				(if (or (null ,key-val-var) (> new-key-val ,key-val-var))
+				    (progn
+				      (setq ,key-val-var new-key-val)
+				      new)
+				  old)))
+	  nil
+	  ,filterp
+	  ((,key-val-var nil))))
+    `(nil
+      #'(lambda (old new) (if (null old) new (max old new)))
+      nil
+      ,filterp)))
 
-(def-gmap-res-type min (&key filterp)
-  "Returns the minimum of the values, optionally filtered by `filterp'; or `nil'
-if there are none."
-  `(nil
-    #'(lambda (old new) (if (null old) new (min old new)))
-    nil
-    ,filterp))
+(def-gmap-res-type min (&key filterp key)
+  "Optionally filters the values by `filterp', then returns the minimum, or if `key'
+is supplied, the first value with the minimum key; or `nil' if no values were supplied
+\(or survived filtering)."
+  (if key
+      (let ((key-val-var (gensym "KEY-VAL-")))
+	`(nil
+	  #'(lambda (old new) (let ((new-key-val ,(gmap>funcall key 'new)))
+				(if (or (null ,key-val-var) (< new-key-val ,key-val-var))
+				    (progn
+				      (setq ,key-val-var new-key-val)
+				      new)
+				  old)))
+	  nil
+	  ,filterp
+	  ((,key-val-var nil))))
+    `(nil
+      #'(lambda (old new) (if (null old) new (min old new)))
+      nil
+      ,filterp)))
 
 (def-gmap-res-type vector (&key use-vector length fill-pointer adjustable filterp)
   "Constructs a vector containing the results.  If `use-vector' is supplied,
