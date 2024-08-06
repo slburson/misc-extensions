@@ -94,7 +94,7 @@ happening in parallel, just as you might with `mapcar`.  It also supports
 arbitrary reductions of the results of the mapped function; more on this below.
 
 GMap is explicitly intended only for iterations that fit this "map-reduce"
-model.  It is not trying to be a "universal" teration construct.  People have
+model.  It is not trying to be a "universal" iteration construct.  People have
 asked me what guarantees it offers concerning the ordering of the various
 operations it performs, and the answer is none, other than those obviously
 imposed by the data flow (a result can't be used until it is computed).  I think
@@ -104,8 +104,7 @@ effects, so that there was "crosswise" data flow between the iterations.  I
 strongly advise that such side effects be avoided in `gmap` calls.  If you find
 yourself wanting to use them, either there is a better way (more on this below),
 or else `gmap` simply isn't the right tool for the job.  In short, you should
-think of `gmap` very much as a functional iteration construct (although the
-implementation does use `setq` internally).
+think of `gmap` very much as a _functional_ iteration construct.
 
 In general, my philosophy about iteration in Lisp is that there are many ways to
 do it, for the very good reason that there are many kinds of iterations, and one
@@ -119,8 +118,12 @@ or I might even write the code tail-recursively, counting on the fact that most
 CL implementations these days do tail-call optimization at least between
 functions defined in a single `labels` form.
 
-All that said, occasions to use `gmap` are not at all uncommon, especially if
-you like to write your Lisp in a heavily functional style.
+So when I do use `gmap`, it's specifically intended to convey to someone reading
+the code that the function being mapped is side-effect-free, so that the calls
+to it are independent of one another.  I strongly urge adherence to this rule.
+
+Even with that constraint, I find that occasions to use `gmap` are not at all
+uncommon.  It has proven handy over the years.
 
 The difference between `mapcar` and `gmap` is that with `gmap`, you explicitly
 indicate what kinds of collections the elements come from and how to combine the
@@ -151,7 +154,7 @@ one argument (or more, in some cases) to each call to the function being mapped.
 Also like `mapcar`, `gmap` terminates its iteration when any of the arguments
 runs out of elements.
 
-For a small collection of examples, look at `test-new-syntax' in `tests.lisp'.
+For a small collection of examples, look at `test-new-syntax` in `tests.lisp`.
 
 ### 2.1. Argument types
 
@@ -315,11 +318,13 @@ code with side effects.
 
 - `count-if`: Returns the number of true values.
 
-- `max` &key _filterp_: Returns the maximum of the values, optionally filtered
-  by `filterp`; or `nil` if there are none.
+- `max` &key _filterp_ _key_: Optionally filters the values by `filterp`, then
+  returns the maximum, or if `key` is supplied, the first value with the maximum
+  key; or `nil` if no values were supplied (or survived filtering).
 
-- `min` &key _filterp_: Returns the minimum of the values, optionally filtered
-  by `filterp`; or `nil` if there are none.
+- `min` &key _filterp_ _key_: Optionally filters the values by `filterp`, then
+  returns the minimum, or if `key` is supplied, the first value with the minimum
+  key; or `nil` if no values were supplied (or survived filtering).
 
 - `vector` &key _use-vector length fill-pointer adjustable filterp_: Constructs
   a vector containing the results.  If `use-vector` is supplied, the argument

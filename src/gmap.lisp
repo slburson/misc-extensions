@@ -730,7 +730,7 @@ otherwise, returns false.  Does not work as an operand of `:values'."
 
 (def-gmap-res-type max (&key filterp key)
   "Optionally filters the values by `filterp', then returns the maximum, or if `key'
-is supplied, tne first value with the maximum key; or `nil' if no values were supplied
+is supplied, the first value with the maximum key; or `nil' if no values were supplied
 \(or survived filtering)."
   (if key
       (let ((key-val-var (gensym "KEY-VAL-")))
