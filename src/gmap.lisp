@@ -730,20 +730,31 @@ otherwise, returns false.  Does not work as an operand of `:values'."
 
 (def-gmap-res-type max (&key filterp key)
   "Optionally filters the values by `filterp', then returns the maximum, or if `key'
-is supplied, the first value with the maximum key; or `nil' if no values were supplied
-\(or survived filtering)."
+is supplied, the value with the maximum key (if that's not unique, returns the first
+one); or `nil' if no values were supplied (or survived filtering).  If `key' is
+`:second-value', the second value of the mapped function is used; for example,
+
+   (gmap (:result max :key :second-value) nil (:arg fset::bag-pairs b))
+
+returns the (first) member of bag `b' with the maximum multiplicity."
   (if key
       (let ((key-val-var (gensym "KEY-VAL-")))
 	`(nil
-	  #'(lambda (old new) (let ((new-key-val ,(gmap>funcall key 'new)))
-				(if (or (null ,key-val-var) (> new-key-val ,key-val-var))
-				    (progn
-				      (setq ,key-val-var new-key-val)
-				      new)
-				  old)))
-	  nil
-	  ,filterp
-	  ((,key-val-var nil))))
+	   ,(if (eq key ':second-value)
+		`(:consume 2 #'(lambda (old new key)
+				 (if (or (null ,key-val-var) (> key ,key-val-var))
+				     (progn
+				       (setq ,key-val-var key)
+				       new)
+				   old)))
+	      `#'(lambda (old new)
+		   (let ((new-key-val ,(gmap>funcall key 'new)))
+		     (if (or (null ,key-val-var) (> new-key-val ,key-val-var))
+			 (progn
+			   (setq ,key-val-var new-key-val)
+			   new)
+		       old))))
+	   nil ,filterp ((,key-val-var nil))))
     `(nil
       #'(lambda (old new) (if (null old) new (max old new)))
       nil
@@ -751,20 +762,32 @@ is supplied, the first value with the maximum key; or `nil' if no values were su
 
 (def-gmap-res-type min (&key filterp key)
   "Optionally filters the values by `filterp', then returns the minimum, or if `key'
-is supplied, the first value with the minimum key; or `nil' if no values were supplied
-\(or survived filtering)."
+is supplied, the value with the minimum key (if that's not unique, returns the first
+one); or `nil' if no values were supplied (or survived filtering).  If `key' is
+`:second-value', the second value of the mapped function is used; for example,
+
+   (gmap (:result min :key :second-value) nil (:arg fset::bag-pairs b))
+
+returns the (first) member of bag `b' with the minimum multiplicity."
   (if key
       (let ((key-val-var (gensym "KEY-VAL-")))
 	`(nil
-	  #'(lambda (old new) (let ((new-key-val ,(gmap>funcall key 'new)))
-				(if (or (null ,key-val-var) (< new-key-val ,key-val-var))
-				    (progn
-				      (setq ,key-val-var new-key-val)
-				      new)
-				  old)))
-	  nil
-	  ,filterp
-	  ((,key-val-var nil))))
+	   ,(if (eq key ':second-value)
+		`(:consume 2 #'(lambda (old new key)
+				 (if (or (null ,key-val-var) (< key ,key-val-var))
+				     (progn
+				       (setq ,key-val-var key)
+				       new)
+				   old)))
+	      `#'(lambda (old new) (let ((new-key-val ,(gmap>funcall key 'new)))
+				     (if (or (null ,key-val-var) (< new-key-val ,key-val-var))
+					 (progn
+					   (setq ,key-val-var new-key-val)
+					   new)
+				       old))))
+	   nil
+	   ,filterp
+	   ((,key-val-var nil))))
     `(nil
       #'(lambda (old new) (if (null old) new (min old new)))
       nil
