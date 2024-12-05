@@ -684,7 +684,8 @@ pairs.  Note that `filterp', if supplied, must take two arguments."
 
 (def-gmap-res-type append (&key filterp)
   "Returns the result of `append'ing the values, optionally filtered by
-`filterp'."
+`filterp' (that is, each list is filtered as a whole, not its individual
+elements)."
   `(nil
     #'(lambda (old new) (revappend new old))
     #'nreverse
@@ -692,7 +693,8 @@ pairs.  Note that `filterp', if supplied, must take two arguments."
 
 (def-gmap-res-type nconc (&key filterp)
   "Returns the result of `nconc'ing the values, optionally filtered by
-`filterp'."
+`filterp' (that is, each list is filtered as a whole, not its individual
+elements)."
   (let ((result-var (gensym "RESULT-")))	; have to use our own, sigh.
     `(nil					; init
       #'(lambda (tail-loc new)			; nextfn
@@ -722,6 +724,10 @@ otherwise, returns false.  Does not work as an operand of `:values'."
 (def-gmap-res-type sum (&key filterp)
   "Returns the sum of the values, optionally filtered by `filterp'."
   `(0 #'+ nil ,filterp))
+
+(def-gmap-res-type product (&key filterp)
+  "Returns the product of the values, optionally filtered by `filterp'."
+  `(1 #'* nil ,filterp))
 
 (def-gmap-res-type count-if ()
   "Returns the number of true values."
