@@ -325,32 +325,32 @@ code with side effects.
    returns the maximum, or if `key` is supplied, the value with the maximum key
    (if that's not unique, returns the first one); or `nil` if no values were
    supplied (or survived filtering).  Example:
-```
+   ```
    (gmap (:result max :key #'cdr) nil (:arg list alist))
-```
+   ```
    returns the (first) pair of `alist` with the maximum `cdr`.
 
    If `key` is `:second-value`, the second value of the mapped function is used;
    for example,
-```
+   ```
    (gmap (:result max :key :second-value) nil (:arg alist an-alist))
-```
+   ```
    returns the (first) `car` of `an-alist` with the maximum corresponding `cdr`.
 
 - `min` &key _filterp_ _key_: Optionally filters the values by `filterp`, then
    returns the minimum, or if `key` is supplied, the value with the minimum key
    (if that's not unique, returns the first one); or `nil` if no values were
    supplied (or survived filtering).  Example:
-```
+   ```
    (gmap (:result min :key #'cdr) nil (:arg list alist))
-```
+   ```
    returns the (first) pair of `alist` with the minimum `cdr`.
 
    If `key` is `:second-value`, the second value of the mapped function is used;
    for example,
-```
+   ```
    (gmap (:result min :key :second-value) nil (:arg alist an-alist))
-```
+   ```
    returns the (first) `car` of `an-alist` with the minimum corresponding `cdr`.
 
 - `vector` &key _use-vector length fill-pointer adjustable filterp_: Constructs
