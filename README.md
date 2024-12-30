@@ -316,15 +316,42 @@ code with side effects.
 - `sum` &key _filterp_: Returns the sum of the values, optionally filtered by
   `filterp`.
 
+- `product` &key _filterp_: Returns the product of the values, optionally
+  filtered by `filterp`.
+
 - `count-if`: Returns the number of true values.
 
 - `max` &key _filterp_ _key_: Optionally filters the values by `filterp`, then
-  returns the maximum, or if `key` is supplied, the first value with the maximum
-  key; or `nil` if no values were supplied (or survived filtering).
+   returns the maximum, or if `key` is supplied, the value with the maximum key
+   (if that's not unique, returns the first one); or `nil` if no values were
+   supplied (or survived filtering).  Example:
+```
+   (gmap (:result max :key #'cdr) nil (:arg list alist))
+```
+   returns the (first) pair of `alist` with the maximum `cdr`.
+
+   If `key` is `:second-value`, the second value of the mapped function is used;
+   for example,
+```
+   (gmap (:result max :key :second-value) nil (:arg alist an-alist))
+```
+   returns the (first) `car` of `an-alist` with the maximum corresponding `cdr`.
 
 - `min` &key _filterp_ _key_: Optionally filters the values by `filterp`, then
-  returns the minimum, or if `key` is supplied, the first value with the minimum
-  key; or `nil` if no values were supplied (or survived filtering).
+   returns the minimum, or if `key` is supplied, the value with the minimum key
+   (if that's not unique, returns the first one); or `nil` if no values were
+   supplied (or survived filtering).  Example:
+```
+   (gmap (:result min :key #'cdr) nil (:arg list alist))
+```
+   returns the (first) pair of `alist` with the minimum `cdr`.
+
+   If `key` is `:second-value`, the second value of the mapped function is used;
+   for example,
+```
+   (gmap (:result min :key :second-value) nil (:arg alist an-alist))
+```
+   returns the (first) `car` of `an-alist` with the minimum corresponding `cdr`.
 
 - `vector` &key _use-vector length fill-pointer adjustable filterp_: Constructs
   a vector containing the results.  If `use-vector` is supplied, the argument
@@ -373,6 +400,8 @@ the first example above would look like this:
 
 ```common-lisp
 (gmap (:list) #'foo (:list this-list) (:list that-list))
+;; The parens around the result are optional; you can also write:
+(gmap :list #'foo (:list this-list) (:list that-list))
 ```
 
 The reason I made them keywords was so that uses of them, as in this example,
@@ -390,11 +419,16 @@ important not to break existing code; so here's what I have done.
 `def-gmap-arg-type` and `def-gmap-res-type`, if given a name that is not a
 keyword symbol, now also define the keyword symbol with the same name; but
 before they do that, they check that it is not already defined by a previous
-call supplying a different non-keyword name, and if so, they signal an error.
+call supplying a different non-keyword name; if it is, they signal an error.
 
 With this change, the old syntax will continue to work, but collisions, where
 two systems try to define argument or result types with the same symbol-name,
 will be detected; previously, the one loaded last would "win".
+
+(Personally, I've settled on a compromise, wherein I write result types `and`
+and `or` in the old syntax, as `:and` and `:or`; it's not plausible that these
+could be defined as types.  For other result types, and all argument types, I
+use the new syntax.)
 
 
 ## 3. Macro `fn`
@@ -412,7 +446,7 @@ name beginning with `_` as a parameter name, to indicate an ignored parameter;
 
 One catch, though, is that if you inadvertently write `#'(fn ...)`, you will get
 a probably-unintelligible compiler error.  Just delete the `#'`.  (Lisp Machine
-Lisp had something called a "lambda macro" that solved this problem, but the
+Lisp had something called "lambda macros" that solved this problem, but the
 feature didn't make it into Common Lisp.)
 
 ## 4. Lexical contexts

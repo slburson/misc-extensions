@@ -737,12 +737,17 @@ otherwise, returns false.  Does not work as an operand of `:values'."
 (def-gmap-res-type max (&key filterp key)
   "Optionally filters the values by `filterp', then returns the maximum, or if `key'
 is supplied, the value with the maximum key (if that's not unique, returns the first
-one); or `nil' if no values were supplied (or survived filtering).  If `key' is
-`:second-value', the second value of the mapped function is used; for example,
+one); or `nil' if no values were supplied (or survived filtering).  Example:
 
-   (gmap (:result max :key :second-value) nil (:arg fset::bag-pairs b))
+   (gmap (:result max :key #'cdr) nil (:arg list alist))
 
-returns the (first) member of bag `b' with the maximum multiplicity."
+returns the (first) pair of `alist' with the maximum `cdr'.
+
+If `key' is `:second-value', the second value of the mapped function is used; for example,
+
+   (gmap (:result max :key :second-value) nil (:arg alist an-alist))
+
+returns the (first) `car' of `an-alist' with the maximum corresponding `cdr'."
   (if key
       (let ((key-val-var (gensym "KEY-VAL-")))
 	`(nil
@@ -769,12 +774,17 @@ returns the (first) member of bag `b' with the maximum multiplicity."
 (def-gmap-res-type min (&key filterp key)
   "Optionally filters the values by `filterp', then returns the minimum, or if `key'
 is supplied, the value with the minimum key (if that's not unique, returns the first
-one); or `nil' if no values were supplied (or survived filtering).  If `key' is
-`:second-value', the second value of the mapped function is used; for example,
+one); or `nil' if no values were supplied (or survived filtering).  Example:
 
-   (gmap (:result min :key :second-value) nil (:arg fset::bag-pairs b))
+   (gmap (:result min :key #'cdr) nil (:arg list an-alist))
 
-returns the (first) member of bag `b' with the minimum multiplicity."
+returns the (first) pair of `an-alist' with the minimum `cdr'.
+
+If `key' is `:second-value', the second value of the mapped function is used; for example,
+
+   (gmap (:result min :key :second-value) nil (:arg alist an-alist))
+
+returns the (first) `car' of `an-alist' with the minimum corresponding `cdr'."
   (if key
       (let ((key-val-var (gensym "KEY-VAL-")))
 	`(nil
