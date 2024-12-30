@@ -12,7 +12,7 @@ refer to it as `nlet` here.
 
 There are two key ideas:
 
-- `nlet` allows more than one variable in a binding clause, to bind to
+- `nlet` allows more than one variable in a binding clause to bind to
   additional values returned by the init-form, as with `multiple-value-bind`.
 - `nlet` allows the binding clauses to be nested to indicate sequential binding:
   more deeply nested clauses are within the scopes of bindings made by less
