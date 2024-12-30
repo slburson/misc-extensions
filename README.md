@@ -156,7 +156,17 @@ runs out of elements.
 
 For a small collection of examples, look at `test-new-syntax` in `tests.lisp`.
 
-### 2.1. Argument types
+### 2.1. Mapped function
+
+The mapped function is called with one or two arguments from each argument
+generator (the ones that generate two arguments are noted below).  It may return
+multiple values; some result collectors make use of the additional values
+(again, see below).
+
+A literal `nil` may be supplied as an abbreviation for the n-ary identity
+function `#'values`.
+
+### 2.2. Argument types
 
 The set of argument types is extensible.  Thus you can adapt `gmap` to other
 kinds of data structures over which you would like to iterate.  For details of
@@ -236,7 +246,7 @@ of the list.
   `start` and `stop` may be supplied to select a subsequence of `str`; `incr`
   may be supplied (it must be positive) to select every second element etc.
 
-### 2.2. Result types
+### 2.3. Result types
 
 GMap, unlike `mapcar`, has the ability to perform arbitrary reductions on the
 results returned by the function being mapped.  So, cases where you might have
@@ -391,7 +401,7 @@ code with side effects.
   value of the function being mapped, that says whether to include it in the
   result.
 
-### 2.3. The Old Syntax
+### 2.4. The Old Syntax
 
 For most of GMap's existence, it has had a slightly different syntax from that
 shown above.  The `:arg` and `:result` keywords were not used; instead, the
