@@ -57,9 +57,13 @@ or a list whose car is `nil' and whose cdr has the same form as the value of
 an arg type expander (see `def-gmap-arg-type')."
   (unless arg-specs
     (error "At least one argument spec is required."))
-  (gmap>expand fn
-	       (gmap>res-spec-lookup res-spec)
-	       (mapcar #'gmap>arg-spec-lookup arg-specs)))
+  (let ((arg-specs (mapcar #'gmap>arg-spec-lookup arg-specs))
+	((result (gmap>expand fn (gmap>res-spec-lookup res-spec) arg-specs))))
+    (reduce (lambda (expansion arg-spec)
+	      (let ((wrapper-fn (sixth arg-spec)))
+		(if wrapper-fn (funcall wrapper-fn expansion)
+		  expansion)))
+	    arg-specs :initial-value result)))
 
 ;;; This does the real work.
 ;;; (Sorry for the weird Multics-influenced naming convention, but these are
@@ -116,7 +120,8 @@ an arg type expander (see `def-gmap-arg-type')."
 
 ;;; extract the let-specs.
 (defun gmap>let-specs (arg-specs res-specs)
-  (nconc (mapcan #'fifth arg-specs) (mapcan #'fifth res-specs)))
+  (append (reduce #'append (mapcar #'fifth arg-specs))
+	  (reduce #'append (mapcar #'fifth res-specs))))
 
 ;;; generate the do-variable spec for each argument.
 (defun gmap>param (arg-spec)
@@ -237,8 +242,10 @@ is called on the state variable, a true result causing the iteration to
 exit; (2, \"argfn\"), if non-nil, a function of one argument which is called
 on the state variable to get the value to be used on this iteration; (3,
 \"nextfn\"), if non-nil, a function of one argument which is called on the
-state variable to get the new value of same; and (4, \"let-specs\") a list of
-clauses for an `nlet' that will be wrapped around the entire expansion.
+state variable to get the new value of same; (4, \"let-specs\") a list of
+clauses for an `nlet' that will be wrapped around the entire expansion; and
+\(5, \"wrapper-fn\"), if non-nil, a function to be called on the entire
+expansion, whose result will be used as the new entire expansion.
 
 It is also possible for an arg-type to generate multiple arguments.  If
 element 2, \"argfn\", is of the form `(:values N FN)', FN should be a function
@@ -288,14 +295,16 @@ old syntax `(:name ...)' to the new syntax `(:arg name ...)'."
 ;;; also be no danger of a collision.
 (defmacro def-arg-type (name args &body body)
   "Defines a GMap arg-type.  Syntax is identical to `defun'.  The body should
-return a list of 1 to 5 elements: (0, \"init\") the initial value of the
+return a list of 1 to 6 elements: (0, \"init\") the initial value of the
 state variable; (1, \"exitp\"), if non-nil, a function of one argument which
 is called on the state variable, a true result causing the iteration to
 exit; (2, \"argfn\"), if non-nil, a function of one argument which is called
 on the state variable to get the value to be used on this iteration; (3,
 \"nextfn\"), if non-nil, a function of one argument which is called on the
-state variable to get the new value of same; and (4, \"let-specs\") a list of
-clauses for an `nlet' that will be wrapped around the entire expansion.
+state variable to get the new value of same; (4, \"let-specs\") a list of
+clauses for an `nlet' that will be wrapped around the entire expansion; and
+\(5, \"wrapper-fn\"), if non-nil, a function to be called on the entire
+expansion, whose result will be used as the new entire expansion.
 
 It is also possible for an arg-type to generate multiple arguments.  If
 element 2, \"argfn\", is of the form `(:values N FN)', FN should be a function
@@ -495,6 +504,30 @@ there is one iteration for each two elements."
     (:values 2 #'(lambda (plist) (values (car plist) (cadr plist))))
     #'cddr))
 
+(def-gmap-arg-type hash-table (ht)
+  "Yields, as two values, the successive pairs of `ht'."
+  (let ((key-tmp (gensym "KEY-"))
+	(val-tmp (gensym "VAL-"))
+	(iter-fn (gensym "HT-ITER-")))
+    `(nil
+      #'(lambda (x)
+	  (declare (ignore x))
+	  (let ((more? key val (,iter-fn)))
+	    (if more?
+		(progn
+		  (setq ,key-tmp key ,val-tmp val)
+		  nil)
+	      t)))
+      (:values 2 #'(lambda (x)
+		     (declare (ignore x))
+		     (values ,key-tmp ,val-tmp)))
+      nil
+      ((,key-tmp nil) (,val-tmp nil))
+      ;; Note the leading comma.  This is called at expansion time, not runtime.
+      ,#'(lambda (expansion)
+	   `(with-hash-table-iterator (,iter-fn ,ht)
+	      ,expansion)))))
+
 (def-gmap-arg-type tails (list)
   "Yields the successive tails (cdrs) of `list', starting with `list' itself, which
 may be improper."
@@ -681,6 +714,19 @@ pairs.  Note that `filterp', if supplied, must take two arguments."
   "Consumes two values from the mapped function; returns a plist of the
 pairs.  Note that `filterp', if supplied, must take two arguments."
   `(nil (:consume 2 #'(lambda (res x y) (cons y (cons x res)))) #'nreverse ,filterp))
+
+(def-gmap-res-type hash-table (&key test size rehash-size rehash-threshold filterp)
+  "Consumes two values from the mapped function; returns a hash-table of
+the pairs.  If any of `test', `size', `rehash-size', or `rehash-threshold' are
+supplied, they are passed to `make-hash-table'.  Note that `filterp', if supplied,
+must take two arguments."
+  `((make-hash-table ,@(and test `(:test ,test))
+		     ,@(and size `(:size ,size))
+		     ,@(and rehash-size `(:rehash-size ,rehash-size))
+		     ,@(and rehash-threshold `(:rehash-threshold ,rehash-threshold)))
+    (:consume 2 #'(lambda (ht k v) (setf (gethash k ht) v) ht))
+    nil
+    ,filterp))
 
 (def-gmap-res-type append (&key filterp)
   "Returns the result of `append'ing the values, optionally filtered by
