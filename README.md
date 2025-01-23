@@ -202,6 +202,10 @@ of the list.
 - `plist` _plist_: Yields, as two values, the successive pairs of elements of
   `plist'; that is, there is one iteration for each two elements.
 
+- `hash-table` _table_: Yields, as two values, the successive pairs of `table`.
+  (Warning: the ordering of pairs is Lisp-implementation-dependent and should not
+  be relied on.)
+
 - `tails` _list_: Yields the successive tails (cdrs) of `list`, starting with
   `list` itself, which may be improper.
 
@@ -308,6 +312,12 @@ code with side effects.
 - `plist` &key _filterp_: Consumes two values from the mapped function; returns
   a plist of the pairs.  Note that `filterp`, if supplied, must take two
   arguments.
+
+- `hash-table` &key _test_ _size_ _rehash-size_ _rehash-threshold_ _filterp_:
+  Consumes two values from the mapped function; returns a hash-table of the
+  pairs.  If any of `test`, `size`, `rehash-size`, or `rehash-threshold` are
+  supplied, they are passed to `make-hash-table`.  Note that `filterp`, if
+  supplied, must take two arguments.
 
 - `append` &key _filterp_: Returns the result of `append`ing the values,
   optionally filtered by `filterp`.
