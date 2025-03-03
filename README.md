@@ -412,8 +412,8 @@ code with side effects.
   result.
 
 - `array` _dims_ &key _element-type_ _initial-element_ _filterp_: Constructs an
-  array containing the results.  Passes `dims', and `element-type' and
-  `initial-element' if supplied, to `make-array'.  If the array is
+  array containing the results.  Passes `dims`, and `element-type` and
+  `initial-element` if supplied, to `make-array`.  If the array is
   multidimensional, fills it in row-major order.
 
 ### 2.4. The Old Syntax
