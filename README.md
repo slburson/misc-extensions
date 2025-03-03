@@ -411,6 +411,11 @@ code with side effects.
   value of the function being mapped, that says whether to include it in the
   result.
 
+- `array` _dims_ &key _element-type_ _initial-element_ _filterp_: Constructs an
+  array containing the results.  Passes `dims', and `element-type' and
+  `initial-element' if supplied, to `make-array'.  If the array is
+  multidimensional, fills it in row-major order.
+
 ### 2.4. The Old Syntax
 
 For most of GMap's existence, it has had a slightly different syntax from that
