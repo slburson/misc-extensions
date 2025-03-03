@@ -519,3 +519,53 @@ indentation.
 
 There are also `rflet` and `rmacrolet`, but I don't think I've ever used them.
 
+## 7. Succinct class definitions with `define-class`
+
+As everyone knows, `defclass` forms tend to be rather verbose and repetitive:
+
+```common-lisp
+(defclass frob (widget)
+    ((color :initarg :color :reader frob-color
+       :initform (error "A color must be specified.")
+       :documentation "The color of the frob.")
+     (height :initarg :height :accessor frob-height
+       :initform 3.0
+       :documentation "The height of the frob in cm.")
+     ...)
+  (:documentation "The class of all frobs.")
+```
+
+I've written a `define-class` macro to shorten them.  It is completely upward
+compatible with `defclass`; you could just replace `defclass` with
+`define-class` and have a valid invocation that would produce the same result.
+But `define-class` provides several features to make the definition more
+succinct.  Use only the ones you like!  The big change is that where `defclass`
+slot descriptions have a strict alternating keyword-value syntax, `define-class`
+is more flexible.
+
+- A doc string for the class can be placed just before the slot specs (visually
+  similar to where doc strings for functions go).
+- The first element of a slot specifier, which is normally a slot name, can
+  instead be a list `(slot-name initform)`; an `:initform` option will be
+  generated.
+- `:may-init` generates `:initarg :slot-name`.
+- `:must-init` generates `:initarg :slot-name`, and also an `:initform` that
+  signals an error if the argument is not provided to `make-instance`.
+- `:readable` generates `:reader gf-name`, and `:accessible` generates
+  `:accessor gf-name`, where `gf-name` is either the slot name or, if a
+  `:conc-name` _class_ option is supplied, that string prepended to the slot
+  name.
+- A doc string can appear anywhere in the slot options; `:documentation` will be
+  inserted.
+- Or, you can use `:doc` as an abbreviation for `:documentation`.
+
+So, here's the above example using `define-class`:
+
+```common-lisp
+(define-class frob (widget)
+  "The class of all frobs."
+  ((color :must-init :readable "The color of the frob.")
+   ((height 3.0) :may-init :accessible "The height of the frob in cm."))
+  (:conc-name #:frob-))
+```
+

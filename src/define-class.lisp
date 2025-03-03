@@ -12,15 +12,15 @@
   - The first element of a slot specifier, which is normally a slot name,
     can instead be a list (slot-name initform); an `:initform' option will
     be generated
-  - A doc string can appear anywhere in the slot options; a `:documentation'
-    slot option will be generated
-  - Or, you can use `:doc' as an abbreviation for `:documentation'
   - `:may-init' generates `:initarg :slot-name'
   - `:must-init' generates `:initarg :slot-name', and also an `:initform'
     that signals an error if the argument is not provided to `make-instance'
   - `:readable' and `:accessible' generate `:reader' resp. `:accessor' slot
     options; the name given will be the slot name, unless a _class_ option
     `:conc-name' is supplied, in which case the conc-name will be prepended
+  - A doc string can appear anywhere in the slot options; a `:documentation'
+    slot option will be generated
+  - Or, you can use `:doc' as an abbreviation for `:documentation'
 
 Also, a doc string for the class can be placed just before the slot-specs.
 
