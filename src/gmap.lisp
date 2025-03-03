@@ -981,5 +981,20 @@ the result."
 	     ,filterp
 	     ((,len-temp 0)))))))
 
+(def-gmap-res-type array (dims &key (element-type t) (initial-element nil initial-element?) filterp)
+  "Constructs an array containing the results.  Passes `dims', and `element-type'
+and `initial-element' if supplied, to `make-array'.  If the array is
+multidimensional, fills it in row-major order."
+  (let ((index-temp (gensym "INDEX-")))
+    `((make-array ,dims :element-type ,element-type
+		  . ,(and initial-element? `(:initial-element ,initial-element)))
+      #'(lambda (ary next-elt)
+	  (setf (row-major-aref ary (the fixnum ,index-temp)) next-elt)
+	  (incf (the fixnum ,index-temp))
+	  ary)
+      nil
+      ,filterp
+      ((,index-temp 0)))))
+
 
 ; End of gmap.lisp

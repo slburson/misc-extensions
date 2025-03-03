@@ -450,6 +450,13 @@ and `or` in the old syntax, as `:and` and `:or`; it's not plausible that these
 could be defined as types.  For other result types, and all argument types, I
 use the new syntax.)
 
+### 2.5. Examples
+
+To return the position of the largest value in a list `numbers`:
+
+```
+(gmap (:result max :key :second-value) nil (:arg index 0) (:arg list numbers))
+```
 
 ## 3. Macro `fn`
 
