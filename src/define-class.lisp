@@ -101,12 +101,12 @@ containing STARTPOS."
              (ignore-errors
                (progn (backward-sexp 1)
                       (looking-at ":documentation\\_>\\|:doc\\_>"))))
-	   ;; Detects a class doc string in `define-class/model'.
+	   ;; Detects a class doc string in `define-class'.
 	   (save-excursion
 	     (goto-char listbeg)
 	     (forward-char)
-	     (or (looking-at "define-class") (looking-at "define-model")))
-	   ;; Detects doc strings in `define-class/model' slot options.
+	     (looking-at "define-class"))
+	   ;; Detects doc strings in `define-class' slot options.
 	   (save-excursion
 	     (goto-char listbeg)
 	     (ignore-errors
@@ -115,6 +115,6 @@ containing STARTPOS."
 	       (if (looking-at "\"")
 		   (backward-sexp 3)
 		 (backward-sexp 2))
-	       (or (looking-at "define-class") (looking-at "define-model")))))))
+	       (looking-at "define-class"))))))
 
 ||#

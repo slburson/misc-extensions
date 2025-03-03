@@ -569,3 +569,12 @@ So, here's the above example using `define-class`:
   (:conc-name #:frob-))
 ```
 
+Let me emphasize, you can still use the `defclass` slot options in any case
+where the above features do not do what you want; for instance, if you want a
+different reader/accessor name for a particular slot than what `define-class`
+would have used.
+
+BTW, for GNU Emacs users, if you look at the bottom of `src/define-class.lisp`,
+you will see an Emacs patch that will improve the fontification of
+`define-class` slot doc strings, in the case where they are not preceded by
+`:documentation` / `:doc`.
