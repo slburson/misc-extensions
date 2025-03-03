@@ -16,6 +16,7 @@
 			     (:file "fn")
 			     (:file "tests")
 			     (:file "rev-fun-bind")
+			     (:file "define-class")
 			     (:file "contexts")
 			     (:file "context-tests")))))
 
