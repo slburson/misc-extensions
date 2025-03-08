@@ -639,17 +639,20 @@ and multiplying by `base' after each iteration."
 (def-gmap-arg-type vector (vec &key start stop incr)
   "Yields elements of vector `vec'.  `start' and `stop' may be supplied to select
 a subsequence of `vec'; `incr' may be supplied (it must be positive) to select
-every second element etc.  For performance, you may prefer `:simple-vector'."
+every second element etc.  For performance, you may prefer `simple-vector'."
   (let ((vec-temp (gensym "VEC-"))
 	(incr-temp (and incr (gensym "INCR-")))
 	(stop-temp (gensym "STOP-")))
-    `(,(or start 0)
-       #'(lambda (i) (>= i ,stop-temp))
-       #'(lambda (i) (aref ,vec-temp i))
-       #'(lambda (x) (+ x ,(or incr-temp 1)))
-       ((,vec-temp ,vec)
-	,@(and incr `((,incr-temp ,incr)))
-	((,stop-temp ,(or stop `(length ,vec-temp))))))))
+    `(,(if start `(max ,start 0) 0)
+      #'(lambda (i) (>= i ,stop-temp))
+      #'(lambda (i)
+	  (declare (optimize (speed 3) (safety 0))) ; try to suppress redundant bounds check
+	  (aref ,vec-temp i))
+      #'(lambda (x) (+ x ,(or incr-temp 1)))
+      ((,vec-temp ,vec)
+       ,@(and incr `((,incr-temp ,incr)))
+       ((,stop-temp ,(if stop `(min ,stop (length ,vec-temp))
+		       `(length ,vec-temp))))))))
 
 (def-gmap-arg-type simple-vector (vec &key start stop incr)
   "Yields elements of vector `vec', which is assumed to be simple, and whose size
@@ -659,13 +662,16 @@ every second element etc."
   (let ((vec-temp (gensym "VEC-"))
 	(incr-temp (and incr (gensym "INCR-")))
 	(stop-temp (gensym "STOP-")))
-    `(,(or start 0)
-       #'(lambda (i) (>= (the fixnum i) ,stop-temp))
-       #'(lambda (i) (svref ,vec-temp (the fixnum i)))
-       #'(lambda (i) (the fixnum (+ (the fixnum i) ,(or incr-temp 1))))
-       ((,vec-temp ,vec)
-	,@(and incr `((,incr-temp (the fixnum ,incr))))
-	((,stop-temp (the fixnum ,(or stop `(length ,vec-temp)))))))))
+    `(,(if start `(max ,start 0) 0)
+      #'(lambda (i) (>= (the fixnum i) ,stop-temp))
+      #'(lambda (i)
+	  (declare (optimize (speed 3) (safety 0))) ; try to suppress redundant bounds check
+	  (svref ,vec-temp (the fixnum i)))
+      #'(lambda (i) (the fixnum (+ (the fixnum i) ,(or incr-temp 1))))
+      ((,vec-temp ,vec)
+       ,@(and incr `((,incr-temp (the fixnum ,incr))))
+       ((,stop-temp (the fixnum ,(if stop `(min ,stop (length ,vec-temp))
+				   `(length ,vec-temp)))))))))
 
 (def-gmap-arg-type string (str &key start stop incr)
   "Yields elements of string `str'.  `start' and `stop' may be supplied to select
@@ -674,13 +680,16 @@ every second element etc.  For performance, you may prefer `:simple-string'."
   (let ((str-temp (gensym "STR-"))
 	(incr-temp (and incr (gensym "INCR-")))
 	(stop-temp (gensym "STOP-")))
-    `(,(or start 0)
-       #'(lambda (i) (>= i ,stop-temp))
-       #'(lambda (i) (char ,str-temp i))
-       #'(lambda (i) (+ i ,(or incr-temp 1)))
-       ((,str-temp (string ,str))
-	,@(and incr `((,incr-temp ,incr)))
-	((,stop-temp ,(or stop `(length ,str-temp))))))))
+    `(,(if start `(max ,start 0) 0)
+      #'(lambda (i) (>= i ,stop-temp))
+      #'(lambda (i)
+	  (declare (optimize (speed 3) (safety 0))) ; try to suppress redundant bounds check
+	  (char ,str-temp i))
+      #'(lambda (i) (+ i ,(or incr-temp 1)))
+      ((,str-temp (string ,str))
+       ,@(and incr `((,incr-temp ,incr)))
+       ((,stop-temp ,(if stop `(min ,stop (length ,str-temp))
+		       `(length ,str-temp))))))))
 
 (def-gmap-arg-type simple-string (str &key start stop incr)
   "Yields elements of string `str', which is assumed to be simple, and whose size
@@ -690,13 +699,36 @@ every second element etc."
   (let ((str-temp (gensym "STR-"))
 	(incr-temp (and incr (gensym "INCR-")))
 	(stop-temp (gensym "STOP-")))
-    `(,(or start 0)
-       #'(lambda (i) (>= (the fixnum i) ,stop-temp))
-       #'(lambda (i) (schar ,str-temp (the fixnum i)))
-       #'(lambda (i) (+ (the fixnum i) ,(or incr-temp 1)))
-       ((,str-temp ,str)
-	,@(and incr `((,incr-temp (the fixnum ,incr))))
-	((,stop-temp (the fixnum ,(or stop `(length ,str-temp)))))))))
+    `(,(if start `(max ,start 0) 0)
+      #'(lambda (i) (>= (the fixnum i) ,stop-temp))
+      #'(lambda (i)
+	  (declare (optimize (speed 3) (safety 0))) ; try to suppress redundant bounds check
+	  (schar ,str-temp (the fixnum i)))
+      #'(lambda (i) (+ (the fixnum i) ,(or incr-temp 1)))
+      ((,str-temp ,str)
+       ,@(and incr `((,incr-temp (the fixnum ,incr))))
+       ((,stop-temp (the fixnum ,(if stop `(min ,stop (length ,str-temp))
+				   `(length ,str-temp)))))))))
+
+(def-gmap-arg-type array (ary &key start stop incr)
+  "Yields elements of array `ary', which may be multidimensional and/or
+specialized.  Access is via `row-major-aref', so the elements are yielded
+in row-major order.  `start' and `stop', which are row-major indices, may
+be supplied to select a subsequence, and `incr' to skip one or more elements
+at each step."
+  (let ((ary-temp (gensym "ARY-"))
+	(incr-temp (and incr (gensym "INCR-")))
+	(stop-temp (gensym "STOP-")))
+    `(,(if start `(max ,start 0) 0)
+      #'(lambda (i) (>= (the fixnum i) ,stop-temp))
+      #'(lambda (i)
+	  (declare (optimize (speed 3) (safety 0))) ; try to suppress redundant bounds check
+	  (row-major-aref ,ary-temp (the fixnum i)))
+      #'(lambda (i) (+ (the fixnum i) ,(or incr-temp 1)))
+      ((,ary-temp ,ary)
+       ,@(and incr `((,incr-temp (the fixnum ,incr))))
+       ((,stop-temp (the fixnum ,(if stop `(min ,stop (array-total-size ,ary-temp))
+				   `(array-total-size ,ary-temp)))))))))
 
 
 ;;; ******** Predefined result types ********
@@ -984,7 +1016,7 @@ the result."
 (def-gmap-res-type array (dims &key (element-type t) (initial-element nil initial-element?) filterp)
   "Constructs an array containing the results.  Passes `dims', and `element-type'
 and `initial-element' if supplied, to `make-array'.  If the array is
-multidimensional, fills it in row-major order."
+multidimensional, fills it in row-major order using `row-major-aref'."
   (let ((index-temp (gensym "INDEX-")))
     `((make-array ,dims :element-type ,element-type
 		  . ,(and initial-element? `(:initial-element ,initial-element)))

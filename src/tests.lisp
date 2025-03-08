@@ -38,6 +38,18 @@
 	       (equalp (gmap (:result string :use-string (make-string 4)) #'code-char
 			     (:arg index 70 74))
 		       "FGHI")
+	       (equalp (gmap (:result array '(2 3) :element-type 'single-float)
+			     (lambda (rm-idx) (let ((i j (floor rm-idx 3)))
+						(float (+ (* i i) (* j j)))))
+			     (:arg index 0 6))
+		       #2A((0.0 1.0 4.0) (1.0 2.0 5.0)))
+	       (equalp (gmap (:result array '(2 3))
+			     (lambda (x) (* x 1.5))
+			     (:arg array #2A((0.0 1.0 4.0) (1.0 2.0 5.0))))
+		       #2A((0.0 1.5 6.0) (1.5 3.0 7.5)))
+	       (equalp (gmap (:result list) nil
+			     (:arg array #2A((0.0 1.0 4.0) (1.0 2.0 5.0)) :start 1 :stop 5))
+		       '(1.0 4.0 1.0 2.0))
 	       (equalp (gmap (:result append) nil
 			     (:arg list '((seoie 2dlkes) (zlcxildk oiden xinld)
 					  (kthsio soi3kd zilk) (oiwnxlk lkdw))))
