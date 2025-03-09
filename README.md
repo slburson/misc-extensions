@@ -250,6 +250,12 @@ of the list.
   `start` and `stop` may be supplied to select a subsequence of `str`; `incr`
   may be supplied (it must be positive) to select every second element etc.
 
+- `array` _ary_ &key _start stop incr_: Yields elements of array `ary`, which
+  may be multidimensional and/or specialized.  Access is via `row-major-aref`,
+  so the elements are yielded in row-major order.  `start` and `stop`, which are
+  row-major indices, may be supplied to select a subsequence, and `incr` to skip
+  one or more elements at each step.
+
 ### 2.3. Result types
 
 GMap, unlike `mapcar`, has the ability to perform arbitrary reductions on the
