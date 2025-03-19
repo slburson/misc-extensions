@@ -59,13 +59,17 @@ Example:
 						  (walk `(,(if initform? ':may-init ':must-init) :readable)
 							result))
 					      result))
+					   ((member (car spec) '(:doc :documentation))
+					    (walk (cddr spec)
+						  (list* ':documentation (remove-indentation (cadr spec)) result)))
 					   ((member (car spec) '(:reader :writer :accessor :allocation :initarg
-								 :initform :type :documentation))
+								 :initform :type))
 					    (when (eq (car spec) ':initform)
 					      (setq initform? t))
 					    (walk (cddr spec) (list* (car spec) (cadr spec) result)))
 					   ((stringp (car spec))
-					    (walk (cdr spec) (list* ':documentation (car spec) result)))
+					    (walk (cdr spec) (list* ':documentation (remove-indentation (car spec))
+								    result)))
 					   ((eq (car spec) ':must-init)
 					    (walk (cdr spec)
 						  (let ((initarg (intern (string slot-name) (symbol-package ':doc))))
@@ -90,9 +94,6 @@ Example:
 					    (walk (cdr spec) result))
 					   ((eq (car spec) ':variable)
 					    (walk (list* ':may-init ':accessible (cdr spec)) result))
-					   ((eq (car spec) ':doc)
-					    (walk (cddr spec)
-						  (list* ':documentation (cadr spec) result)))
 					   (t
 					    (let ((ext-fn? (and (symbolp (car spec))
 								(get (car spec) 'define-class-extensions))))
@@ -127,6 +128,45 @@ any slots in a `define-class' form, the function will be called \(at load
 time\) with two arguments, the class name and the list of slots on which
 the option appeared."
   (pushnew ext-fn (get option 'define-class-extensions)))
+
+(defun remove-indentation (str)
+  "De-indents the second and subsequent lines of `str' by an amount equal
+to the minimum indentation of those lines."
+  (let ((lines nil))
+    (do ((pos 0))
+	(nil)
+      (let* ((nl (position #\Newline str :start pos))
+	     (line (subseq str pos nl)))
+	(push line lines)
+	(if nl (setq pos (1+ nl))
+	  (return))))
+    (setq lines (nreverse lines))
+    (labels ((line-indentation (line)
+	       (do ((i 0 (1+ i))
+		    (indent 0))
+		   ((= i (length line)) nil)
+		 (case (char line i)
+		   (#\Space (incf indent))
+		   ;; Assuming 8-column tabs.  You do use Emacs, right? :-)
+		   (#\Tab (setq indent (* 8 (ceiling (1+ indent) 8))))
+		   (t (return (values indent i))))))
+	     (reindent (line text-start new-indent)
+	       (concatenate 'string (make-string new-indent :initial-element #\Space)
+			    (subseq line text-start))))
+      (let ((min-indent nil)
+	    (new-lines (list (car lines))))
+	(dolist (line (cdr lines))
+	  (unless (zerop (length line))
+	    (let ((indent (line-indentation line)))
+	      (when indent
+		(setq min-indent (if min-indent (min min-indent indent) indent))))))
+	(dolist (line (cdr lines))
+	  (new-let:nlet ((indent text-start (line-indentation line)))
+	    (push (if (null indent) ""
+		    (reindent line text-start (- indent min-indent)))
+		  new-lines)))
+	(reduce (lambda (x y) (concatenate 'string x (string #\Newline) y))
+		(nreverse new-lines))))))
 
 #||
 
