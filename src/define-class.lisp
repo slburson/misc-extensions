@@ -5,7 +5,7 @@
 
 (in-package :misc-extensions.define-class)
 
-(defmacro define-class (name superclasses slot-specs &body class-options)
+(defmacro define-class (class-name superclasses slot-specs &body class-options)
   "A macro to make class definitions less verbose.  Upwardly compatible with
 `cl:defclass', but adds additional syntax:
 
@@ -18,6 +18,10 @@
   - `:readable' and `:accessible' generate `:reader' resp. `:accessor' slot
     options; the name given will be the slot name, unless a _class_ option
     `:conc-name' is supplied, in which case the conc-name will be prepended
+  - Additionally, `:constant' is an abbreviation for `:must-init :readable'
+    if the spec contains no initform, or `:may-init :readable' if there is
+    an initform (in either syntax)
+  - And `:variable' is an abbreviation for `:may-init :accessible'
   - A doc string can appear anywhere in the slot options; a `:documentation'
     slot option will be generated
   - Or, you can use `:doc' as an abbreviation for `:documentation'
@@ -36,54 +40,103 @@ Example:
     (let ((class-doc slot-specs))
       (setq slot-specs (pop class-options))
       (setq class-options (cons (list ':documentation class-doc) class-options))))
-  `(defclass ,name ,superclasses
-       ,(mapcar (lambda (slot-spec)
-		  (if (symbolp slot-spec) slot-spec
-		    (labels ((walk (spec slot-name conc-name result)
-			       (cond ((null spec) result)
-				     ((member (car spec) '(:reader :writer :accessor :allocation :initarg
-							   :initform :type :documentation))
-				      (walk (cddr spec) slot-name conc-name
-					    (list* (car spec) (cadr spec) result)))
-				     ((stringp (car spec))
-				      (walk (cdr spec) slot-name conc-name
-					    (list* ':documentation (car spec) result)))
-				     ((eq (car spec) ':must-init)
-				      (walk (cdr spec) slot-name conc-name
-					    (let ((initarg (intern (string slot-name) (symbol-package ':initarg))))
-					      (list* ':initarg initarg
-						     ':initform `(error ,(format nil "No value supplied for ~S"
-										 initarg))
-						     result))))
-				     ((eq (car spec) ':may-init)
-				      (walk (cdr spec) slot-name conc-name
-					    (list* ':initarg (intern (string slot-name) (symbol-package ':initarg))
-						   result)))
-				     ((member (car spec) '(:readable :accessible))
-				      (let ((nm (if conc-name
-						    (intern (concatenate 'string conc-name (string slot-name)))
-						  slot-name)))
-					(walk (cdr spec) slot-name conc-name
-					      (list* (if (eq (car spec) ':readable) ':reader ':accessor)
-						     nm result))))
-				     ((eq (car spec) ':doc)
-				      (walk (cddr spec) slot-name conc-name
-					    (list* ':documentation (cadr spec) result)))
-				     (t (error "Unrecognized slot option ~S" (car spec))))))
-		      (let ((slot-name (if (consp (car slot-spec)) (caar slot-spec)
-					 (car slot-spec)))
-			    (conc-name (let ((pr (assoc ':conc-name class-options)))
-					 (and pr (string (cadr pr))))))
-			(cons slot-name (walk (cdr slot-spec) slot-name conc-name
-					      (and (consp (car slot-spec)) `(:initform ,(cadar slot-spec)))))))))
-	        slot-specs)
-     . ,(remove-if (lambda (x) (eq (car x) ':conc-name)) class-options)))
+  (let* ((conc-name (let ((pr (assoc ':conc-name class-options)))
+		      (and pr (string (cadr pr)))))
+	 (extension-data nil)
+	 (expanded-slot-specs
+	   (mapcar (lambda (slot-spec)
+		      (if (symbolp slot-spec) slot-spec
+			(let ((slot-name
+				(if (consp (car slot-spec)) (caar slot-spec)
+				  (car slot-spec)))
+			      (initform? (consp (car slot-spec)))
+			      (constant? nil))
+			  (labels ((walk (spec result)
+				     (cond ((null spec)
+					    (if constant?
+						(progn
+						  (setq constant? nil)
+						  (walk `(,(if initform? ':may-init ':must-init) :readable)
+							result))
+					      result))
+					   ((member (car spec) '(:reader :writer :accessor :allocation :initarg
+								 :initform :type :documentation))
+					    (when (eq (car spec) ':initform)
+					      (setq initform? t))
+					    (walk (cddr spec) (list* (car spec) (cadr spec) result)))
+					   ((stringp (car spec))
+					    (walk (cdr spec) (list* ':documentation (car spec) result)))
+					   ((eq (car spec) ':must-init)
+					    (walk (cdr spec)
+						  (let ((initarg (intern (string slot-name) (symbol-package ':doc))))
+						    (list* ':initarg initarg
+							   ':initform `(error ,(format nil "No value supplied for ~S"
+										       initarg))
+							   result))))
+					   ((eq (car spec) ':may-init)
+					    (walk (cdr spec)
+						  (list* ':initarg (intern (string slot-name) (symbol-package ':doc))
+							 result)))
+					   ((member (car spec) '(:readable :accessible))
+					    (let ((nm (if conc-name
+							  (intern (concatenate 'string conc-name (string slot-name)))
+							slot-name)))
+					      (walk (cdr spec)
+						    (list* (if (eq (car spec) ':readable) ':reader ':accessor)
+							   nm result))))
+					   ;; A couple of second-level abbreviations.
+					   ((eq (car spec) ':constant)
+					    (setq constant? t)
+					    (walk (cdr spec) result))
+					   ((eq (car spec) ':variable)
+					    (walk (list* ':may-init ':accessible (cdr spec)) result))
+					   ((eq (car spec) ':doc)
+					    (walk (cddr spec)
+						  (list* ':documentation (cadr spec) result)))
+					   (t
+					    (let ((ext-fn? (and (symbolp (car spec))
+								(get (car spec) 'define-class-extensions))))
+					      (if ext-fn?
+						  (let ((prev-pr (assoc (car spec) extension-data)))
+						    (if prev-pr
+							(push slot-name (cdr prev-pr))
+						      (push (cons (car spec) (list slot-name))
+							    extension-data))
+						    (walk (cdr spec) result))
+						(error "Unrecognized slot option ~S" (car spec))))))))
+			    (cons slot-name (walk (cdr slot-spec)
+						  (and initform? `(:initform ,(cadar slot-spec)))))))))
+	     slot-specs)))
+    `(progn
+       (defclass ,class-name ,superclasses
+	   ,expanded-slot-specs
+	 . ,(remove-if (lambda (x) (member (car x) '(:conc-name :predicate))) class-options))
+       ,@(let ((pr (assoc ':predicate class-options)))
+	   (and pr `((defun ,(cadr pr) (x) (typep x ',class-name)))))
+       . ,(reduce #'append
+		  (mapcar (lambda (pr)
+			    (mapcar (lambda (ext-fn)
+				      (funcall ext-fn class-name (cdr pr)))
+				    (get (car pr) 'define-class-extensions)))
+			  extension-data)))))
 
+(defun add-define-class-extension (option ext-fn)
+  "Adds a keyword slot option to `define-class'.  `option' should be a
+keyword, and `ext-fn' the name of a function.  If the option is used for
+any slots in a `define-class' form, the function will be called \(at load
+time\) with two arguments, the class name and the list of slots on which
+the option appeared."
+  (pushnew ext-fn (get option 'define-class-extensions)))
 
 #||
 
-If, using the above macro, you include doc strings without prefixing them with
-`:documentation' or `:doc' -- as the macro allows you to do -- you may notice
+Here's the Emacs indentation definition I use:
+
+(put 'define-class 'common-lisp-indent-function
+     '(6 (&whole 4 &rest 1) &rest (&whole 2 &rest (&whole 1 &rest 2))))
+
+Also, if, using the above macro, you include doc strings without prefixing them
+with `:documentation' or `:doc' -- as the macro allows you to do -- you may notice
 that Emacs renders them in the face for ordinary strings (`font-lock-string-face'),
 rather than in the face used for doc strings (`font-lock-doc-face').
 This Emacs-Lisp customization will cause them to be rendered in the doc string face:

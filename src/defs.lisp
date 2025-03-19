@@ -36,5 +36,5 @@
 (defpackage :misc-extensions.define-class
   ;; No nickname for this one -- risk of collision seems higher
   (:use :cl)
-  (:export #:define-class))
+  (:export #:define-class #:add-define-class-extension))
 
