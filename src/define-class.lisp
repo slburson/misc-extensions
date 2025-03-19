@@ -116,7 +116,7 @@ Example:
        . ,(reduce #'append
 		  (mapcar (lambda (pr)
 			    (mapcar (lambda (ext-fn)
-				      (funcall ext-fn class-name (cdr pr)))
+				      (funcall ext-fn class-name (reverse (cdr pr))))
 				    (get (car pr) 'define-class-extensions)))
 			  extension-data)))))
 
