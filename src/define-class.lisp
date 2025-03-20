@@ -129,6 +129,12 @@ time\) with two arguments, the class name and the list of slots on which
 the option appeared."
   (pushnew ext-fn (get option 'define-class-extensions)))
 
+;;; For `remove-indentation' to work correctly in the presence of tabs, it needs
+;;; to know how wide they are.  If you use tabs at all -- many don't -- and set
+;;; them to a different width, you'll want to change this.  Be aware that it takes
+;;; effect at compile time.
+(defparameter *tab-width* 8)
+
 (defun remove-indentation (str)
   "De-indents the second and subsequent lines of `str' by an amount equal
 to the minimum indentation of those lines."
@@ -147,8 +153,7 @@ to the minimum indentation of those lines."
 		   ((= i (length line)) nil)
 		 (case (char line i)
 		   (#\Space (incf indent))
-		   ;; Assuming 8-column tabs.  You do use Emacs, right? :-)
-		   (#\Tab (setq indent (* 8 (ceiling (1+ indent) 8))))
+		   (#\Tab (setq indent (* *tab-width* (ceiling (1+ indent) *tab-width*))))
 		   (t (return (values indent i))))))
 	     (reindent (line text-start new-indent)
 	       (concatenate 'string (make-string new-indent :initial-element #\Space)
