@@ -644,15 +644,17 @@ every second element etc.  For performance, you may prefer `simple-vector'."
 	(incr-temp (and incr (gensym "INCR-")))
 	(stop-temp (gensym "STOP-")))
     `(,(if start `(max (the fixnum ,start) 0) 0)
-      #'(lambda (i) (>= i ,stop-temp))
+      #'(lambda (i) (>= (the fixnum i) ,stop-temp))
       #'(lambda (i)
-	  (declare (optimize (speed 3) (safety 0))) ; try to suppress redundant bounds check
+	  ;; At speed 3, the SBCL compiler issues a note if it can't optimize the `aref'
+	  ;; because it doesn't know the upgraded array element type.
+	  (declare (optimize (speed 1) (safety 0))) ; try to suppress redundant bounds check
 	  (aref ,vec-temp i))
-      #'(lambda (x) (+ x ,(or incr-temp 1)))
+      #'(lambda (i) (the fixnum (+ (the fixnum i) ,(or incr-temp 1))))
       ((,vec-temp (the vector ,vec))
        ,@(and incr `((,incr-temp ,incr)))
-       ((,stop-temp ,(if stop `(min ,stop (length ,vec-temp))
-		       `(length ,vec-temp))))))))
+       ((,stop-temp (the fixnum ,(if stop `(min ,stop (length ,vec-temp))
+				   `(length ,vec-temp)))))))))
 
 (def-gmap-arg-type simple-vector (vec &key start stop incr)
   "Yields elements of vector `vec', which is assumed to be simple, and whose size
@@ -722,7 +724,7 @@ at each step."
     `(,(if start `(max (the fixnum ,start) 0) 0)
       #'(lambda (i) (>= (the fixnum i) ,stop-temp))
       #'(lambda (i)
-	  (declare (optimize (speed 3) (safety 0))) ; try to suppress redundant bounds check
+	  (declare (optimize (speed 1) (safety 0))) ; try to suppress redundant bounds check
 	  (row-major-aref ,ary-temp (the fixnum i)))
       #'(lambda (i) (+ (the fixnum i) ,(or incr-temp 1)))
       ((,ary-temp (the array ,ary))
