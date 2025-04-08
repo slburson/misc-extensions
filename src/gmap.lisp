@@ -46,6 +46,7 @@
   "A generalized mapping macro.  Applies `fn' to the successive values generated
 by the `arg-specs', analagously to `mapcar'; that is, on each iteration, each
 arg-spec yields one value, and `fn' is called with these values as arguments.
+\(`fn' can be given as `:id', which is equivalent to `#'values'.\)
 The values returned by `fn' are accumulated into a result according to
 `res-spec'.  The `res-spec' is either a list whose car is a predefined result
 type, or a list whose car is `nil' and whose cdr has the same form as the value
@@ -736,7 +737,8 @@ at each step."
 ;;; ******** Predefined result types ********
 
 (def-gmap-res-type list (&key filterp)
-  "Returns a list of the values, optionally filtered by `filterp'."
+  "Returns a list of the values, optionally filtered by `filterp' \(which
+can be `:id' to filter out `nil'\)."
   `(nil #'(lambda (x y) (cons y x)) #'nreverse ,filterp))
 
 (def-gmap-res-type alist (&key filterp)
@@ -765,7 +767,7 @@ must take two arguments."
 (def-gmap-res-type append (&key filterp)
   "Returns the result of `append'ing the values, optionally filtered by
 `filterp' (that is, each list is filtered as a whole, not its individual
-elements)."
+elements) \(`filterp' can be `:id' to filter out `nil'\)."
   `(nil
     #'(lambda (old new) (revappend new old))
     #'nreverse
@@ -774,7 +776,7 @@ elements)."
 (def-gmap-res-type nconc (&key filterp)
   "Returns the result of `nconc'ing the values, optionally filtered by
 `filterp' (that is, each list is filtered as a whole, not its individual
-elements)."
+elements) \(`filterp' can be `:id' to filter out `nil'\)."
   (let ((result-var (gensym "RESULT-")))	; have to use our own, sigh.
     `(nil					; init
       #'(lambda (tail-loc new)			; nextfn
@@ -802,11 +804,13 @@ otherwise, returns false.  Does not work as an operand of `:values'."
 	    (if new (return new) nil))))
 
 (def-gmap-res-type sum (&key filterp)
-  "Returns the sum of the values, optionally filtered by `filterp'."
+  "Returns the sum of the values, optionally filtered by `filterp'
+\(`filterp' can be `:id' to filter out `nil'\)."
   `(0 #'+ nil ,filterp))
 
 (def-gmap-res-type product (&key filterp)
-  "Returns the product of the values, optionally filtered by `filterp'."
+  "Returns the product of the values, optionally filtered by `filterp'
+\(`filterp' can be `:id' to filter out `nil'\)."
   `(1 #'* nil ,filterp))
 
 (def-gmap-res-type count-if ()
@@ -906,7 +910,7 @@ the correct length (but to do this, it must cons a temporary list).
 
 In any case, if `filterp' is supplied, it is a predicate of one argument,
 the value of the function being mapped, that says whether to include it in
-the result."
+the result \(`filterp' can be `:id' to filter out `nil'\)."
   (cond ((and use-vector fill-pointer)
 	 `(,use-vector
 	   #'(lambda (vec next-elt)
@@ -970,7 +974,7 @@ the correct length (but to do this, it must cons a temporary list).
 
 In any case, if `filterp' is supplied, it is a predicate of one argument,
 the value of the function being mapped, that says whether to include it in
-the result."
+the result \(`filterp' can be `:id' to filter out `nil'\)."
   (cond ((and use-string fill-pointer)
 	 `(,use-string
 	   #'(lambda (str next-elt)

@@ -163,8 +163,9 @@ generator (the ones that generate two arguments are noted below).  It may return
 multiple values; some result collectors make use of the additional values
 (again, see below).
 
-A literal `nil` may be supplied as an abbreviation for the n-ary identity
-function `#'values`.
+A literal `:id` may be supplied as an abbreviation for the identity function;
+it is equivalent to `#'values`.  (`nil` may be written instead of `:id`, but
+this usage is a bit unclear and is deprecated.)
 
 ### 2.2. Argument types
 
@@ -309,7 +310,7 @@ code with side effects.
 #### 2.2.1. Predefined result types
 
 - `list` &key _filterp_: Returns a list of the values, optionally filtered by
-  `filterp`.
+  `filterp` (which can be `:id` to filter out `nil`).
 
 - `alist` &key _filterp_: Consumes two values from the mapped function; returns
   an alist of the pairs.  Note that `filterp`, if supplied, must take two
@@ -326,10 +327,10 @@ code with side effects.
   supplied, must take two arguments.
 
 - `append` &key _filterp_: Returns the result of `append`ing the values,
-  optionally filtered by `filterp`.
+  optionally filtered by `filterp` (which can be `:id` to filter out `nil`).
 
 - `nconc` &key _filterp_: Returns the result of `nconc`ing the values,
-  optionally filtered by `filterp`.
+  optionally filtered by `filterp` (which can be `:id` to filter out `nil`).
 
 - `and`: If one of the values is false, terminates the iteration and returns
   false; otherwise returns the last value.  Does not work as an operand of
@@ -340,10 +341,10 @@ code with side effects.
   (Generalizes `cl:some`.)
 
 - `sum` &key _filterp_: Returns the sum of the values, optionally filtered by
-  `filterp`.
+  `filterp` (which can be `:id` to filter out `nil`).
 
 - `product` &key _filterp_: Returns the product of the values, optionally
-  filtered by `filterp`.
+  filtered by `filterp` (which can be `:id` to filter out `nil`).
 
 - `count-if`: Returns the number of true values.
 
@@ -396,7 +397,7 @@ code with side effects.
 
   In any case, if `filterp` is supplied, it is a predicate of one argument,
   the value of the function being mapped, that says whether to include it in
-  the result.
+  the result (`filterp` can be `:id` to filter out `nil`).
 
 - `string` &key _use-string length fill-pointer adjustable filterp_: Constructs
   a string containing the results.  If `use-string` is supplied, the argument
@@ -415,7 +416,7 @@ code with side effects.
 
   In any case, if `filterp` is supplied, it is a predicate of one argument, the
   value of the function being mapped, that says whether to include it in the
-  result.
+  result (`filterp` can be `:id` to filter out `nil`).
 
 - `array` _dims_ &key _element-type_ _initial-element_ _filterp_: Constructs an
   array containing the results.  Passes `dims`, and `element-type` and
