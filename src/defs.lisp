@@ -15,6 +15,7 @@
   (:nicknames :gmap)
   (:use :cl)
   (:export #:gmap #:def-gmap-arg-type #:def-arg-type #:def-gmap-res-type #:def-result-type
+	   #:copy-gmap-type
 	   ;; Predefined argument and result type names that aren't inherited from `cl:'.
 	   #:constant #:index #:index-inc #:alist #:plist #:sum #:product)
   (:shadowing-import-from :new-let #:let #:cond))

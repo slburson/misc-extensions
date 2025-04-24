@@ -471,6 +471,16 @@ from the function being mapped."
 		 raw-res-spec))))))
 
 
+(defun copy-gmap-type (from-symbol to-symbol)
+  "If you shadow the name of a CL builtin that is also a GMap arg and/or result
+type, you will want to use this to copy the definition(s) from the CL symbol to
+your shadowing symbol."
+  (setf (get to-symbol 'arg-type-expander) (get from-symbol 'arg-type-expander))
+  (setf (get to-symbol 'arg-type-doc-string) (get from-symbol 'arg-type-doc-string))
+  (setf (get to-symbol 'res-type-expander) (get from-symbol 'res-type-expander))
+  (setf (get to-symbol 'res-type-doc-string) (get from-symbol 'res-type-doc-string)))
+
+
 ;;; ******** Predefined argument types ********
 ;;; See above for documentation.
 
@@ -813,6 +823,12 @@ otherwise, returns false.  Does not work as an operand of `:values'."
 \(`filterp' can be `:id' to filter out `nil'\)."
   `(1 #'* nil ,filterp))
 
+(def-gmap-res-type count ()
+  "Returns the number of true values."
+  '(0 #'(lambda (n new)
+	  (if new (1+ n) n))))
+
+;;; Old name for `count'; deprecated.
 (def-gmap-res-type count-if ()
   "Returns the number of true values."
   '(0 #'(lambda (n new)

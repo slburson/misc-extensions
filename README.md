@@ -346,7 +346,7 @@ code with side effects.
 - `product` &key _filterp_: Returns the product of the values, optionally
   filtered by `filterp` (which can be `:id` to filter out `nil`).
 
-- `count-if`: Returns the number of true values.
+- `count`: Returns the number of true values.
 
 - `max` &key _filterp_ _key_: Optionally filters the values by `filterp`, then
    returns the maximum, or if `key` is supplied, the value with the maximum key
