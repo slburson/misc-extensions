@@ -25,6 +25,7 @@
   - A doc string can appear anywhere in the slot options; a `:documentation'
     slot option will be generated
   - Or, you can use `:doc' as an abbreviation for `:documentation'
+  - Class option `:predicate' can be supplied to define a predicate on the class
 
 Also, a doc string for the class can be placed just before the slot-specs.
 
