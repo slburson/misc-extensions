@@ -567,6 +567,10 @@ is more flexible.
   `:accessor gf-name`, where `gf-name` is either the slot name or, if a
   `:conc-name` _class_ option is supplied, that string prepended to the slot
   name.
+- Additionally, `:constant` is an abbreviation for `:must-init :readable`
+  if the spec contains no initform, or `:may-init :readable` if there is
+  an initform (in either syntax)
+- And `:variable` is an abbreviation for `:may-init :accessible`
 - A doc string can appear anywhere in the slot options; `:documentation` will be
   inserted.
 - Or, you can use `:doc` as an abbreviation for `:documentation`.
@@ -576,8 +580,8 @@ So, here's the above example using `define-class`:
 ```common-lisp
 (define-class frob (widget)
   "The class of all frobs."
-  ((color :must-init :readable "The color of the frob.")
-   ((height 3.0) :may-init :accessible "The height of the frob in cm."))
+  ((color :constant "The color of the frob.")
+   ((height 3.0) :variable "The height of the frob in cm."))
   (:conc-name #:frob-))
 ```
 

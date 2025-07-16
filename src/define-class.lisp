@@ -33,9 +33,9 @@ Example:
 
   (define-class convertible (car)
     \"A convertible is a car with a top that can be either down or up.\"
-    ((top-color :must-init :readable
+    ((top-color :constant
        \"The color of the top.\")
-     ((top-state ':up) :accessible
+     ((top-state ':up) :variable
        \"The current state of the top, `:down' or `:up'.\")))"
   (when (stringp slot-specs)
     (let ((class-doc slot-specs))
