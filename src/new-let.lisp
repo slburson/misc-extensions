@@ -316,24 +316,28 @@ Here the X in (BAZ X) is the one bound to the result of (FOO)."
 (defun bcond-clause (clause block-nm)
   (cl:cond ((not (listp clause))
 	      (error "COND clause is not a list: ~S" clause))
-	     ((and (listp (car clause))
-		   ;; Allow NLET and CL:LET in case the user hasn't chosen
-		   ;; to shadow LET.
-		   (member (caar clause) '(let nlet cl:let)))
-	      (bcond-build-clause (caar clause) (cadar clause)
-				  `(progn . ,(cddar clause))
-				  (cdr clause) block-nm))
-	     (t
-	      (bcond-build-clause nil nil (car clause) (cdr clause) block-nm))))
+	   ((and (listp (car clause))
+		 ;; Allow NLET and CL:LET in case the user hasn't chosen
+		 ;; to shadow LET.
+		 (member (caar clause) '(let nlet cl:let)))
+	    (let ((decls nil)
+		  (body (cddar clause)))
+	      (do () ((not (and (listp (car body)) (eq (caar body) 'declare))))
+		(push (pop body) decls))
+	      (setq decls (nreverse decls))
+	      (bcond-build-clause (caar clause) (cadar clause) decls
+				  `(progn . ,body) (cdr clause) block-nm)))
+	   (t
+	    (bcond-build-clause nil nil nil (car clause) (cdr clause) block-nm))))
 
-(defun bcond-build-clause (let-sym let-clauses pred consequents block-nm)
+(defun bcond-build-clause (let-sym let-clauses decls pred consequents block-nm)
   (cl:let ((body (if consequents
 		     `(if ,pred (return-from ,block-nm (progn . ,consequents)))
 		   (cl:let ((temp-var (gensym)))
 		     `(cl:let ((,temp-var ,pred))
 			(if ,temp-var (return-from ,block-nm ,temp-var)))))))
     (if let-clauses
-	`(,let-sym ,let-clauses ,body)
+	`(,let-sym ,let-clauses ,@decls ,body)
       body)))
 
 
