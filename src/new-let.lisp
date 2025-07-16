@@ -320,8 +320,8 @@ Here the X in (BAZ X) is the one bound to the result of (FOO)."
 		 ;; Allow NLET and CL:LET in case the user hasn't chosen
 		 ;; to shadow LET.
 		 (member (caar clause) '(let nlet cl:let)))
-	    (let ((decls nil)
-		  (body (cddar clause)))
+	    (cl:let ((decls nil)
+		     (body (cddar clause)))
 	      (do () ((not (and (listp (car body)) (eq (caar body) 'declare))))
 		(push (pop body) decls))
 	      (setq decls (nreverse decls))
