@@ -332,7 +332,9 @@ Here the X in (BAZ X) is the one bound to the result of (FOO)."
 
 (defun bcond-build-clause (let-sym let-clauses decls pred consequents block-nm)
   (cl:let ((body (if consequents
-		     `(if ,pred (return-from ,block-nm (progn . ,consequents)))
+		     (if (eq pred 't)
+			 `(return-from ,block-nm (progn . ,consequents))
+		       `(if ,pred (return-from ,block-nm (progn . ,consequents))))
 		   (cl:let ((temp-var (gensym)))
 		     `(cl:let ((,temp-var ,pred))
 			(if ,temp-var (return-from ,block-nm ,temp-var)))))))
