@@ -46,7 +46,7 @@ Example:
 	 (extension-data nil)
 	 (expanded-slot-specs
 	   (mapcar (lambda (slot-spec)
-		      (if (symbolp slot-spec) slot-spec
+		      (if (symbolp slot-spec) (list slot-spec slot-spec)
 			(let ((slot-name
 				(if (consp (car slot-spec)) (caar slot-spec)
 				  (car slot-spec)))
@@ -106,19 +106,20 @@ Example:
 							    extension-data))
 						    (walk (cdr spec) result))
 						(error "Unrecognized slot option ~S" (car spec))))))))
-			    (cons slot-name (walk (cdr slot-spec)
-						  (and initform? `(:initform ,(cadar slot-spec)))))))))
+			    (list slot-name (cdr slot-spec)
+				  (walk (cdr slot-spec)
+					(and initform? `(:initform ,(cadar slot-spec)))))))))
 	     slot-specs)))
     `(progn
        (defclass ,class-name ,superclasses
-	   ,expanded-slot-specs
+	   ,(mapcar (lambda (x) (cons (first x) (third x))) expanded-slot-specs)
 	 . ,(remove-if (lambda (x) (member (car x) '(:conc-name :predicate))) class-options))
        ,@(let ((pr (assoc ':predicate class-options)))
 	   (and pr `((defun ,(cadr pr) (x) (typep x ',class-name)))))
        . ,(reduce #'append
 		  (mapcar (lambda (pr)
 			    (mapcar (lambda (ext-fn)
-				      (funcall ext-fn class-name (reverse (cdr pr))))
+				      (funcall ext-fn class-name (reverse (cdr pr)) expanded-slot-specs))
 				    (get (car pr) 'define-class-extensions)))
 			  extension-data)))))
 
@@ -126,8 +127,10 @@ Example:
   "Adds a keyword slot option to `define-class'.  `option' should be a
 keyword, and `ext-fn' the name of a function.  If the option is used for
 any slots in a `define-class' form, the function will be called \(at load
-time\) with two arguments, the class name and the list of slots on which
-the option appeared."
+time\) with three arguments: the class name; the list of slots on which
+the option appeared; and an alist mapping slot names to lists of (a) the
+original slot-spec and (b) the expanded slot-spec that will be passed to
+`defclass'."
   (pushnew ext-fn (get option 'define-class-extensions)))
 
 ;;; For `remove-indentation' to work correctly in the presence of tabs, it needs
