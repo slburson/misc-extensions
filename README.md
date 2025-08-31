@@ -2,38 +2,81 @@
 
 The Misc-Extensions system provides several macros that I like to use.
 
-## 1. Macro `nlet`
+See `src/defs.lisp` for the package declarations.
 
-Macro `nlet` is an upward-compatible replacement for `cl:let` that generalizes
-`let`, `let*`, and `multiple-value-bind`.  It can be imported as `let`,
-shadowing `cl:let` — this is how I have used it for years — but if that seems
-too radical, the same macro can be imported as `nlet`.  For clarity, I will
-refer to it as `nlet` here.
+## 1. Macros to bind multiple values
 
-There are two key ideas:
+For writing code in a mostly-functional style, Common Lisp's multiple-value
+feature is extremely useful (I make heavy use of it in
+[FSet](https://github.com/slburson/fset), for example, both internally and in
+the API).  But the most important primitive the language provides for receiving
+multiple values from a call, `multiple-value-bind`, is a bit clunky to use.
+First, its long name would be appropriate for a rarely used operation, but I, at
+least, want to do this a lot.  Second, combining it with other bindings can be
+done only by nesting; where `cl:let` and `cl:let*` let you bind multiple
+variables to the values of their respective init-forms, `multiple-value-bind`
+receives values from only a single form.
 
-- `nlet` allows more than one variable in a binding clause to bind to
-  additional values returned by the init-form, as with `multiple-value-bind`.
-- `nlet` allows the binding clauses to be nested to indicate sequential binding:
-  more deeply nested clauses are within the scopes of bindings made by less
-  deeply nested clauses.  Within a level, bindings are parallel, as in `cl:let`.
+Misc-Extensions provides three related macros to elegantly and succinctly bind
+lists of one or more variables to the one or more values of their respective
+init-forms.  All of these allow more than one variable in a binding clause; the
+last element of the clause is the init-form, and the preceding elements are the
+variables to be bound to the values of the init-form.
 
-A simple example first:
+The two that I expect most people will want to use are `mvlet` and `mvlet*`.
+`mvlet`, like `cl:let`, makes all bindings in parallel, so the init-forms can
+refer to variables of the same names in the containing scope.  `mvlet*`, like
+`c:let*`, makes them sequentially, so each init-form can refer to any of the
+variables bound in the preceding clauses.  Except for being able to bind
+multiple values, they are almost perfectly upward-compatible with the CL
+operators, with a minor caveat I will return to below.
+
+`nlet` generalizes the other two by making it possible to do any combination of
+parallel and sequential binding.  It allows the binding clauses to be nested to
+indicate sequential binding: more deeply nested clauses are within the scopes of
+bindings made by less deeply nested clauses.  Within a level, bindings are
+parallel.  I'm personally fond of `nlet`, but my guess is that most people will
+find the syntax a little off-putting.
+
+Here are examples of all three.
 
 ```common-lisp
-   (nlet ((a (foo))
-          ((b c (bar a))))
-     ...)
+  (let ((a (foo)))
+    ...
+    (mvlet ((a b (bar))
+            (c (baz a))  ; outer 'a'
+            ...)
+      ...))
+
+  (let ((a (foo)))
+    ...
+    (mvlet* ((a b (bar))
+             (c (baz a))  ; inner 'a'
+             ...)
+      ...))
+
+  (let ((a (foo)))
+    ...
+    (nlet ((a b (bar))
+           (c (baz a))  ; outer 'a'
+           ...)
+      ...))
+
+  (let ((a (foo)))
+    ...
+    (nlet ((a b (bar))
+           ((c (baz a)))  ; inner 'a'
+           ...)
+      ...))
 ```
 
-Here, first `a` is bound to the (first) value of `(foo)`, and then `b` and `c`
-are bound to the (first and second) values of `(bar a)`, where the latter `a`
-refers to the binding created by the first clause.  (As with
-`multiple-value-bind`, if `foo` returns more than one value, or `bar` returns
-more than two, the extra values are silently ignored; if fewer values are
-returned than expected, `nil` is supplied for the missing ones.)
+In all four examples we see `a` and `b` being bound to the first two values of
+`(bar)` in the first clause, but whether the reference to `a` in the second
+clause refers to the `a` in the outer scope or the one that was just bound
+depends on whether `mvlet` or `mvlet*` was used, or in the `nlet` case, the
+nesting level of the second clause.
 
-A more complex example:
+A more complex `nlet` example:
 
 ```common-lisp
   (nlet ((a b c (zot))
@@ -56,32 +99,40 @@ expected that init-forms in nested clauses will refer only to variables bound in
 containing clauses.  However, this is not enforced; for instance, the init-form
 for `g` could refer to `h`, since the latter is bound one level out.
 
-The macro correctly handles `declare` forms at the beginning of the body,
+The macros correctly handle `declare` forms at the beginning of the body,
 emitting the declarations at the correct level within the expansion so that they
-apply to the binding named.
+apply to the binding named.  — Well, almost.  In order to do that, they have to
+be able to detect type declarations, which can start with a type name rather
+than the symbol `type`; and as it turns, out, CL has no portable interface for
+determining whether a symbol is a type name.  (You can find out whether it's a
+_class_ using `find-class`, but there's no portable way to tell whether a symbol
+has been `deftype`d.)  There is a hackish way to do it that works on SBCL,
+Clozure (CCL), ECL, CLASP, Franz Allegro, and LispWorks, but not, as of this
+writing, on ABCL.  On ABCL, the macros use a heuristic that could fail, but
+which I doubt will ever fail in practice.  But, if you want to avoid any risk of
+error, start your type declarations with the symbol `type` if the type is
+user-defined.
 
-I first wrote this macro in 1980, as I was developing a personal Lisp style that
-made heavier use of functional programming than was, I think, common at the
-time.  I quickly found that multiple values were a great convenience for this
-style, but the name `multiple-value-bind` was annoyingly long.  I think many
-others have come to the same conclusion, as various other people have written
-binding macros that handle multiple values less verbosely.  (Also, the `let`
-construct in the Dylan language can bind multiple variables, as can tuple
-assignment in Python.)
+The symbol `nlet` is exported from package `new-let`.  It also exports the same
+macro under the name `let`, so that it can shadow `cl:let`; this is how I use
+it, though again, I suspect most people will not want to do that.  Anyway,
+because `new-let:let` is exported, if you `(:use new-let)` in your package
+declaration, you will also need to include a `:shadowing-import-from` clause to
+say which version of `let` you want to use.
 
-The value of using nesting to indicate sequencing may be less clear; I'm sure
-some readers are thinking, "just use `let*` and be done with it".  That
-certainly is a viable choice.  But I find it makes these expressions a little
-more readable that I can tell exactly which init-forms are intended to reference
-outer bindings, and which aren't; if they were in one big `let*`, I would have
-to read all the init-forms to tell that.
+`mvlet` and `mvlet*` are initially exported from `new-let` as well, but to make
+them a little more convenient to use (especially for those not yet expert in
+dealing with CL packages), I created another package `mvlet` that re-exports
+only these two symbols.  So you can say `(:use mvlet)` to get them, without
+having to shadowing-import anything.
 
+Historical note: I first wrote `nlet` in 1980, on the MIT Lisp Machine, and have
+used it ever since in my own projects.
 
 ## 2. GMap
 
-GMap is an iteration macro for Common Lisp — now one of many, but actually among
-the oldest; I first wrote it in 1980, in Lisp Machine Lisp.  It was conceived as
-a generalization of `mapcar` (hence the name).  It is intended for cases when
+GMap is an iteration macro for Common Lisp.  It was conceived as a
+generalization of `mapcar` (hence the name).  It is intended for cases when
 `mapcar` doesn't suffice because the things you want to map over aren't in
 lists, or you need to collect the results of the mapping into something other
 than a list.
@@ -155,6 +206,10 @@ Also like `mapcar`, `gmap` terminates its iteration when any of the arguments
 runs out of elements.
 
 For a small collection of examples, look at `test-new-syntax` in `tests.lisp`.
+
+Historical note: GMap is now one of several extensible iteration macros, but
+it's actually among the oldest; along with `nlet`, I first wrote it in 1980, in
+Lisp Machine Lisp.
 
 ### 2.1. Mapped function
 
