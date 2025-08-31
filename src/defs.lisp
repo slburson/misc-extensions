@@ -9,11 +9,19 @@
   (:nicknames :new-let)
   (:use :cl)
   (:shadow cl:let cl:cond)
-  (:export #:let #:cond #:nlet #:bcond #:fn))
+  (:export #:let #:cond #:nlet #:mvlet #:mvlet* #:bcond #:fn))
+
+;;; This is just to give people a package to `:use' that doesn't export its
+;;; own `let' and `cond'.
+(defpackage :misc-extensions.mvlet
+  (:nicknames :mvlet)
+  (:use cl)
+  (:import-from :misc-extensions.new-let #:mvlet #:mvlet*)
+  (:export #:mvlet #:mvlet*))
 
 (defpackage :misc-extensions.gmap
   (:nicknames :gmap)
-  (:use :cl)
+  (:use :cl :new-let)
   (:export #:gmap #:def-gmap-arg-type #:def-arg-type #:def-gmap-res-type #:def-result-type
 	   #:copy-gmap-type
 	   ;; Predefined argument and result type names that aren't inherited from `cl:'.

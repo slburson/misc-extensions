@@ -91,9 +91,7 @@ combinations of parallel and sequential binding.  Standard declarations at the
 head of BODY are handled correctly, though nonstandard ones may not be.  If two
 variables of the same name are bound at different levels, any declaration
 applies to the inner one."
-  (multiple-value-bind (decls body)
-      (analyze-decls clauses body)
-    (car (expand-new-let clauses body decls))))
+  (expand-new-let clauses body 'nlet))
 
 ;;; Alternative name for the above.  I could have this one expand into that
 ;;; one, or conversely, but I'd want to duplicate the doc string anyway, and
@@ -115,82 +113,82 @@ combinations of parallel and sequential binding.  Standard declarations at the
 head of BODY are handled correctly, though nonstandard ones may not be.  If two
 variables of the same name are bound at different levels, any declaration
 applies to the inner one."
-  (multiple-value-bind (decls body)
-      (analyze-decls clauses body)
-    (car (expand-new-let clauses body decls))))
+  (expand-new-let clauses body 'nlet))
 
-(defun expand-new-let (clauses body decls)
-  (labels ((expand-1 (this-level-single this-level-multiple next-level body decls)
-	     (cl:cond ((and this-level-multiple
-			    (null (cdr this-level-multiple))
-			    (null this-level-single))
-			 (cl:let ((vars (butlast (car this-level-multiple))))
-			   (multiple-value-bind (body decls)
-			       (expand-1 nil nil next-level body decls)
-			     (values `((multiple-value-bind ,vars
-					   ,(car (last (car this-level-multiple)))
+(defmacro mvlet (clauses &body body)
+  (expand-new-let clauses body 'mvlet))
+
+(defmacro mvlet* (clauses &body body)
+  (expand-new-let clauses body 'mvlet*))
+
+(defun expand-new-let (clauses body mode)
+  (labels ((expand (clauses next-level pending-clauses final-clauses body decls)
+	     (cl:cond ((null clauses)
+		       (let* ((pending-clauses (reverse pending-clauses))
+			      (all-clauses (append pending-clauses final-clauses))
+			      (vars (mapcar #'car all-clauses)))
+			 (if (null next-level)
+			     (values `((cl:let ,all-clauses
 					 ,@(bound-decls decls vars)
-					 ,@(and (null next-level)
-						(mapcar #'(lambda (d) `(declare ,d))
-							(cdr decls)))
+					 ,@(free-decls decls)
 					 . ,body))
-				     (prune-decls decls vars)))))
-		      (this-level-multiple
-		       (let* ((vars (butlast (car this-level-multiple)))
-			      (gensyms (mapcar #'(lambda (x)
-						   (declare (ignore x))
-						   (gensym))
-					       vars)))
-			 (multiple-value-bind (body decls)
-			     (expand-1 (append (mapcar #'list vars gensyms)
-					       this-level-single)
-				       (cdr this-level-multiple) next-level body decls)
-			   (values `((multiple-value-bind ,gensyms
-					 ,(car (last (car this-level-multiple)))
-				       ,@(bound-decls decls vars)
-				       ,@(and (null next-level)
-					      (mapcar #'(lambda (d) `(declare ,d))
-						      (cdr decls)))
-				       . ,body))
-				   (prune-decls decls vars)))))
-		      (this-level-single
-		       (cl:let ((vars (mapcar #'(lambda (x) (if (consp x) (car x) x))
-					      this-level-single)))
-			 (multiple-value-bind (body decls)
-			     (expand-1 nil nil next-level body decls)
-			   (values `((cl:let ,this-level-single
-				       ,@(bound-decls decls vars)
-				       ,@(and (null next-level)
-					      (mapcar #'(lambda (d) `(declare ,d))
-						      (cdr decls)))
-				       . ,body))
-				   (prune-decls decls vars)))))
-		      (next-level
-		       (expand-new-let next-level body decls))
-		      ((cdr decls)
-		       (values `((locally ,@(mapcar #'(lambda (d) `(declare ,d))
-						    (cdr decls))
-				   . ,body))
-			       (list (car decls))))
-		      (t (values `((progn . ,body)) decls)))))
-    (multiple-value-bind (this-level-single this-level-multiple next-level)
-	(split-level clauses nil nil nil)
-      (expand-1 this-level-single this-level-multiple next-level body decls))))
-
-(defun split-level (clauses this-level-single this-level-multiple next-level)
-  (if (null clauses)
-      (values (reverse this-level-single) (reverse this-level-multiple)
-	      next-level)
-    (cl:let ((clause (car clauses)))
-      (cl:cond ((and (listp clause) (listp (car clause)))
-		  (split-level (cdr clauses) this-level-single this-level-multiple
-			       (append next-level clause)))
-	       ((and (listp clause) (cddr clause))
-		(split-level (cdr clauses) this-level-single
-			     (cons clause this-level-multiple) next-level))
-	       (t
-		(split-level (cdr clauses) (cons clause this-level-single)
-			     this-level-multiple next-level))))))
+				     (prune-decls decls vars))
+			   (multiple-value-bind (body decls)
+			       (expand next-level nil nil nil body decls)
+			     (values `((cl:let ,all-clauses
+					 ,@(bound-decls decls vars)
+					 . ,body))
+				     (prune-decls decls vars))))))
+		      ((and (listp (car clauses)) (listp (caar clauses)))
+		       (if (eq mode 'nlet)
+			   (expand (cdr clauses) (append next-level (car clauses))
+				   pending-clauses final-clauses body decls)
+			 (error "Invalid ~A binding clause: ~S" mode (car clauses))))
+		      ((cddar clauses)
+		       (cl:let ((mvb-vars (butlast (car clauses))))
+			 (if (and (null (cdr clauses)) (null next-level)
+				  (null pending-clauses) (null final-clauses))
+			     (values `((multiple-value-bind ,mvb-vars
+					   ,(car (last (car clauses)))
+					 ,@(bound-decls decls mvb-vars)
+					 ,@(free-decls decls)
+					 . ,body))
+				     (prune-decls decls mvb-vars))
+			   (if (eq mode 'mvlet*)
+			       (multiple-value-bind (body decls)
+				   (expand nil (cdr clauses) nil nil body decls)
+				 (format t "decls ~S~%" decls)
+				 (values `((cl:let ,pending-clauses
+					     (multiple-value-bind ,mvb-vars
+						 ,(car (last (car clauses)))
+					       ,@(bound-decls decls mvb-vars)
+					       . ,body)))
+					 decls))
+			     (let* ((pending-clauses (reverse pending-clauses))
+				    (pc-vars (mapcar #'car pending-clauses))
+				    (pc-gensyms (mapcar (lambda (v) (declare (ignore v)) (gensym "V"))
+							pc-vars))
+				    (mvb-gensyms (mapcar (lambda (v) (declare (ignore v)) (gensym "V"))
+							 mvb-vars)))
+			       (multiple-value-bind (body decls)
+				   (expand (cdr clauses) next-level nil
+					   (append final-clauses (mapcar #'list pc-vars pc-gensyms)
+						   (mapcar #'list mvb-vars mvb-gensyms))
+					   body decls)
+				 (values `((cl:let ,(mapcar (lambda (gensym clause) (cons gensym (cdr clause)))
+						     pc-gensyms pending-clauses)
+					     (multiple-value-bind ,mvb-gensyms
+						 ,(car (last (car clauses)))
+					       . ,body)))
+					 decls)))))))
+		      ((eq mode 'mvlet*)
+		       (expand nil (cdr clauses) (list (car clauses)) nil body decls))
+		      (t
+		       (expand (cdr clauses) next-level (cons (car clauses) pending-clauses)
+			       final-clauses body decls)))))
+    (multiple-value-bind (decls body)
+	(analyze-decls clauses body)
+      (car (expand clauses nil nil nil body decls)))))
 
 (defun bound-decls (decls vars)
   (let* ((bd-alist (car decls))
@@ -201,6 +199,9 @@ applies to the inner one."
 					   `(,@(cdr pr) ,(car pr))
 					 `(,(cdr pr) ,(car pr))))
 				   prs))))))
+
+(defun free-decls (decls)
+  (mapcar (lambda (d) `(declare ,d)) (cdr decls)))
 
 (defun prune-decls (decls vars)
   (cl:let ((bd-alist (car decls)))
@@ -230,19 +231,30 @@ second value is `body' with the declarations stripped off."
 	     (cl:cond
 	       ((not (consp decl))	; defensive programming
 		(values bd-alist (cons decl free)))
+	       ((eq (car decl) 'optimize)
+		(values bd-alist (cons decl free)))
 	       ((member (car decl) '(ignore ignorable))
 		;; These are always bound.
 		(values (append (mapcar #'(lambda (x) (cons x (car decl)))
 					(cdr decl))
 				bd-alist)
 			free))
-	       ((type-specifier-name? (car decl))
-		(process-vars (cdr decl) (list 'type (car decl)) bd-alist free vars))
 	       ((eq (car decl) 'type)
 		(process-vars (cddr decl) (list 'type (cadr decl)) bd-alist free vars))
 	       ((member (car decl) '(special dynamic-extent))
+		;; These can be either bound or free.
 		(process-vars (cdr decl) (list (car decl)) bd-alist free vars))
-	       (t (values bd-alist (cons decl free)))))
+	       ((type-specifier-name? (car decl))
+		(process-vars (cdr decl) (list 'type (car decl)) bd-alist free vars))
+	       ((and (every #'symbolp (cdr decl))
+		     (some (lambda (x) (member x vars)) (cdr decl)))
+		;; 'type-specifier-name?' can get false negatives on some implementations,
+		;; plus there could be implementation-specific bound declarations.  So
+		;; heuristically, if it looks like it could be a bound declaration, we
+		;; assume it can be.
+		(process-vars (cdr decl) (list (car decl)) bd-alist free vars))
+	       (t
+		(values bd-alist (cons decl free)))))
 	   (process-vars (decl-vars decl-specs bd-alist free vars)
 	     (if (null decl-vars)
 		 (values bd-alist free)
@@ -263,11 +275,23 @@ second value is `body' with the declarations stripped off."
   (and clauses
        (append (cl:let ((clause (car clauses)))
 		 (cl:cond ((symbolp clause) (cons clause nil))
-			    ((symbolp (car clause)) (butlast clause))
-			    (t (new-let-bound-vars clause))))
+			  ((symbolp (car clause)) (butlast clause))
+			  (t (new-let-bound-vars clause))))
 	       (new-let-bound-vars (cdr clauses)))))
 
 (defun type-specifier-name? (x)
+  ;; Alas, this appears to be the only even semi-portable way to discover whether a symbol
+  ;; has been declared as a type (which can happen by being predefined, or by `defstruct',
+  ;; `defclass', `deftype', or `define-condition').
+  ;; (One source recommended `(subtypep x t)', but in SBCL that always returns `(values t t)'.)
+  #+(or sbcl ccl ecl clasp allegro lispworks)
+  (handler-case (progn (typep nil x) t)
+    (error () nil))
+
+  ;; The only implementation on which I've observed it not to work is ABCL.  The spec does say
+  ;; that the consequences of calling `typep' on a non-type-specifier are undefined.  Sigh.
+  ;; This has no way to find types defined by `deftype'.
+  #-(or sbcl ccl ecl clasp allegro lispworks)
   (or (member x '(array atom bignum bit bit-vector character compiled-function
 		  complex cons double-float extended-char fixnum float function
 		  hash-table integer keyword list long-float nil null number

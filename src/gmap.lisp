@@ -549,8 +549,10 @@ may be improper."
 ;;; If `incr' is +1 or -1, then swapping `start' and `stop' and negating `incr'
 ;;; generates the same sequence in reverse order.  This isn't true, though, in
 ;;; general.  Should it be?
-(def-gmap-arg-type index (&optional (start 0) stop &key (incr 1) (fixnums? t))
-  "Yields integers in the interval [`start', `stop') if `incr' (which defaults
+;;; -- Yes, SBCL, I know I have both `&optional' and `&key' here.  Too late to fix it.
+(locally (declare #+sbcl (sb-ext:muffle-conditions style-warning))
+  (def-gmap-arg-type index (&optional (start 0) stop &key (incr 1) (fixnums? t))
+    "Yields integers in the interval [`start', `stop') if `incr' (which defaults
 to 1) is positive; or in the interval [`stop', `start') if `incr' is negative.
 Specifically, in the upward case, the values begin with `start' and increase by
 `incr' until >= `stop'; in the downward case, the values begin with
@@ -558,45 +560,45 @@ Specifically, in the upward case, the values begin with `start' and increase by
 assumed to be fixnums unless `fixnums?' is a literal `nil'.  `stop' can be
 omitted or a literal `nil' to indicate an unbounded sequence.  `start' can be
 omitted to start at 0."
-  (let ((incr-temp (gensym "INCR-"))
-	(stop-temp (gensym "STOP-")))
-    ;; Aargh, have to handle the constant vs. variable cases of `incr' separately
-    ;; to avoid unreachable-code warnings from Python.  (Suggested heuristic:
-    ;; if code becomes unreachable because a variable is bound to a compile-time
-    ;; constant, and the name of the variable is an uninterned symbol, suppress
-    ;; the warning on the grounds that a macro generated the code in question.)
-    `(,(if (numberp incr)			; init
-	   (if (minusp incr)
-	       (if fixnums? `(+ (the fixnum ,start) ,incr)
-		 `(+ ,start ,incr))
-	     start)
-	 `(if (minusp ,incr-temp)
-	      ,(if fixnums? `(+ (the fixnum ,start) (the fixnum ,incr-temp))
+    (let ((incr-temp (gensym "INCR-"))
+	  (stop-temp (gensym "STOP-")))
+      ;; Aargh, have to handle the constant vs. variable cases of `incr' separately
+      ;; to avoid unreachable-code warnings from Python.  (Suggested heuristic:
+      ;; if code becomes unreachable because a variable is bound to a compile-time
+      ;; constant, and the name of the variable is an uninterned symbol, suppress
+      ;; the warning on the grounds that a macro generated the code in question.)
+      `(,(if (numberp incr)			; init
+	     (if (minusp incr)
+		 (if fixnums? `(+ (the fixnum ,start) ,incr)
+		   `(+ ,start ,incr))
+	       start)
+	   `(if (minusp ,incr-temp)
+		,(if fixnums? `(+ (the fixnum ,start) (the fixnum ,incr-temp))
 		   `(+ ,start ,incr-temp))
-	   ,start))
-      ,(and stop				; exitp
-	    (if (numberp incr)
-		(if fixnums?
+	      ,start))
+	,(and stop				; exitp
+	      (if (numberp incr)
+		  (if fixnums?
+		      `#'(lambda (val)
+			   (,(if (minusp incr) '< '>=)
+			    (the fixnum val) (the fixnum ,stop-temp)))
 		    `#'(lambda (val)
-			 (,(if (minusp incr) '< '>=)
-			   (the fixnum val) (the fixnum ,stop-temp)))
-		  `#'(lambda (val)
-		       (,(if (minusp incr) '< '>=) val ,stop-temp)))
-	      `#'(lambda (val)
-		   ,@(and fixnums? `((declare (type fixnum val ,incr-temp ,stop-temp))))
-		   (if (minusp ,incr-temp)
-		       (< val ,stop-temp)
-		     (>= val ,stop-temp)))))
-      nil					; no argfn
-      #'(lambda (val)				; nextfn
-	  ,(if fixnums?
-	       `(the fixnum (+ (the fixnum val)
-			       (the fixnum ,(if (numberp incr) incr incr-temp))))
-	     `(+ val ,(if (numberp incr) incr incr-temp))))
-      (,@(and (not (numberp incr))		; let-specs
-	      `((,incr-temp ,incr)))
-       ,@(and stop
-	      `((,stop-temp ,stop)))))))
+			 (,(if (minusp incr) '< '>=) val ,stop-temp)))
+		`#'(lambda (val)
+		     ,@(and fixnums? `((declare (type fixnum val ,incr-temp ,stop-temp))))
+		     (if (minusp ,incr-temp)
+			 (< val ,stop-temp)
+		       (>= val ,stop-temp)))))
+	nil					; no argfn
+	#'(lambda (val)				; nextfn
+	    ,(if fixnums?
+		 `(the fixnum (+ (the fixnum val)
+				 (the fixnum ,(if (numberp incr) incr incr-temp))))
+	       `(+ val ,(if (numberp incr) incr incr-temp))))
+	(,@(and (not (numberp incr))		; let-specs
+		`((,incr-temp ,incr)))
+	 ,@(and stop
+		`((,stop-temp ,stop))))))))
 
 (def-gmap-arg-type index-inc (start stop &key (incr 1) (fixnums? t))
   "Yields integers in the interval [`start', `stop'].  Specifically, in the
