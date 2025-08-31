@@ -3,7 +3,7 @@
 (defsystem Misc-Extensions
   :description "The GMap iteration macro, plus a few other useful macros."
   :author "Scott L. Burson <Scott@sympoiesis.com>"
-  :version "4.0.8"
+  :version "4.0.9"
   :homepage "https://github.com/slburson/misc-extensions"
   :source-control "https://github.com/slburson/misc-extensions"
   :license "Public domain"
