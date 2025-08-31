@@ -46,24 +46,18 @@ Here are examples of all three.
     (mvlet ((a b (bar))
             (c (baz a))  ; outer 'a'
             ...)
-      ...))
+      ...)
 
-  (let ((a (foo)))
-    ...
     (mvlet* ((a b (bar))
              (c (baz a))  ; inner 'a'
              ...)
-      ...))
+      ...)
 
-  (let ((a (foo)))
-    ...
     (nlet ((a b (bar))
            (c (baz a))  ; outer 'a'
            ...)
-      ...))
+      ...)
 
-  (let ((a (foo)))
-    ...
     (nlet ((a b (bar))
            ((c (baz a)))  ; inner 'a'
            ...)
@@ -80,12 +74,12 @@ A more complex `nlet` example:
 
 ```common-lisp
   (nlet ((a b c (zot))
-	 ((d (quux a c))
-	  ((e f (mumble b d))
-	   (g (mung a))))
-	 ((h (frobozz c))
-	  ((i (xyzzy h))))
-	 (*print-level* 3))
+         ((d (quux a c))
+          ((e f (mumble b d))
+           (g (mung a))))
+         ((h (frobozz c))
+          ((i (xyzzy h))))
+         (*print-level* 3))
     ...)
 ```
 
