@@ -276,15 +276,14 @@ old syntax `(:name ...)' to the new syntax `(:arg name ...)'."
 	 (setf (get ',name 'arg-type-expander) ',fn-name)
 	 ;; For backward compatibility, we also define the keyword version of the name.
 	 ,@(and kwd-name
-		`((let ((prev (get ',kwd-name 'arg-type-synonym-of)))
+		`((let ((prev (get ',kwd-name 'arg-type-synonym)))
 		    (when (and prev (not (eq prev ',name)))
 		      (cerror "Proceed, overwriting the previous definition"
 			      "GMAP arg type name collision: ~S was a synonym for ~S,~@
 			       but is now being defined as ~S~@
 			       See gmap:def-gmap-arg-type for more info."
 			      ',kwd-name prev ',name))
-		    (setf (get ',kwd-name 'arg-type-expander) ',fn-name)
-		    (setf (get ',kwd-name 'arg-type-synonym-of) ',name))))
+		    (setf (get ',kwd-name 'arg-type-synonym) ',name))))
 	 ,@(and doc-string
 		`((setf (get ',name 'arg-type-doc-string) ,doc-string)))
 	 (pushnew ',name *gmap-arg-type-list*)))))
@@ -331,6 +330,9 @@ being mapped."
 		`((setf (get ',name 'arg-type-doc-string) ,doc-string)))
 	 (pushnew ',name *gmap-arg-type-list*)))))
 
+(defmacro def-arg-type-synonym (name synonym-of)
+  `(setf (get ',name 'arg-type-synonym) ',synonym-of))
+
 
 (defmacro def-gmap-res-type (name args &body body)
   "Defines a GMap result-type.  Syntax is identical to `defun'.  The body should
@@ -373,7 +375,7 @@ old syntax `(:name ...)' to the new syntax `(:result name ...)'."
 	 (setf (get ',name 'res-type-expander) ',fn-name)
 	 ;; For backward compatibility, we also define the keyword version of the name.
 	 ,@(and kwd-name
-		`((let ((prev (get ',kwd-name 'res-type-synonym-of)))
+		`((let ((prev (get ',kwd-name 'res-type-synonym)))
 		    (when (and prev (not (eq prev ',name)))
 		      (cerror "Proceed, overwriting the previous definition"
 			      "GMAP result type name collision: ~S was a synonym for ~S,~@
@@ -381,7 +383,7 @@ old syntax `(:name ...)' to the new syntax `(:result name ...)'."
 			       See gmap:def-gmap-res-type for more info."
 			      ',kwd-name prev ',name))
 		    (setf (get ',kwd-name 'res-type-expander) ',fn-name)
-		    (setf (get ',kwd-name 'res-type-synonym-of) ',name))))
+		    (setf (get ',kwd-name 'res-type-synonym) ',name))))
 	 ,@(and doc-string
 		`((setf (get ',name 'res-type-doc-string) ,doc-string)))
 	 (pushnew ',name *gmap-result-type-list*)))))
@@ -427,6 +429,9 @@ from the function being mapped."
 		`((setf (get ',name 'res-type-doc-string) ,doc-string)))
 	 (pushnew ',name *gmap-result-type-list*)))))
 
+(defmacro def-result-type-synonym (name synonym-of)
+  `(setf (get ',name 'res-type-synonym) ',synonym-of))
+
 
 ;;; look up an arg type.
 (defun gmap>arg-spec-lookup (raw-arg-spec)
@@ -435,14 +440,19 @@ from the function being mapped."
     (let ((type (car raw-arg-spec)))
       (if (null type)
 	  (cdr raw-arg-spec)
-	(let ((generator (or (get type 'arg-type-expander)
-			     ;; Backward compatibility for the old property
-			     (get type ':gmap-arg-spec-expander))))
+	(let ((generator (gmap>arg-expander-lookup type)))
 	  (if generator
 	      (apply generator (cdr raw-arg-spec))
 	    (error "Argument spec, ~S, to gmap is of unknown type~@
 		  (Do you have the package right?)"
 		   raw-arg-spec)))))))
+
+(defun gmap>arg-expander-lookup (arg-type)
+  (let ((synonym (get arg-type 'arg-type-synonym)))
+    (if synonym (gmap>arg-expander-lookup synonym)
+      (or (get arg-type 'arg-type-expander)
+	  ;; Backward compatibility for the old property
+	  (get arg-type ':gmap-arg-spec-expander)))))
 
 ;;; look up a result type.
 (defun gmap>res-spec-lookup (raw-res-spec)
@@ -461,16 +471,22 @@ from the function being mapped."
 		raw-res-spec)))
     (if (null type)
 	(cdr raw-res-spec)
-      (let ((generator (or (get type 'res-type-expander)
-			   ;; Backward compatibility for the old property
-			   (get type ':gmap-res-spec-expander))))
+      (let ((generator (gmap>res-expander-lookup type)))
 	(if generator
 	    (apply generator (and (listp raw-res-spec) (cdr raw-res-spec)))
 	  (error "Result spec, ~S, to gmap is of unknown type~@
 		  (Do you have the package right?)"
 		 raw-res-spec))))))
 
+(defun gmap>res-expander-lookup (res-type)
+  (let ((synonym (get res-type 'res-type-synonym)))
+    (if synonym (gmap>res-expander-lookup synonym)
+      (or (get res-type 'res-type-expander)
+	  ;; Backward compatibility for the old property
+	  (get res-type ':gmap-res-spec-expander)))))
 
+
+;;; Deprecated; use `def-arg-type-synonym' and/or `def-result-type-synonym' instead.
 (defun copy-gmap-type (from-symbol to-symbol)
   "If you shadow the name of a CL builtin that is also a GMap arg and/or result
 type, you will want to use this to copy the definition(s) from the CL symbol to

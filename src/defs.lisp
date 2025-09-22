@@ -23,7 +23,7 @@
   (:nicknames :gmap)
   (:use :cl :new-let)
   (:export #:gmap #:def-gmap-arg-type #:def-arg-type #:def-gmap-res-type #:def-result-type
-	   #:copy-gmap-type
+	   #:copy-gmap-type #:def-arg-type-synonym #:def-result-type-synonym
 	   ;; Predefined argument and result type names that aren't inherited from `cl:'.
 	   #:constant #:index #:index-inc #:alist #:plist #:sum #:product)
   (:shadowing-import-from :new-let #:let #:cond))
