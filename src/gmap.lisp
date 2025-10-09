@@ -70,10 +70,18 @@ an arg type expander (see `def-gmap-arg-type')."
 ;;; (Sorry for the weird Multics-influenced naming convention, but these are
 ;;; internal symbols anyway.)
 (defun gmap>expand (fn res-specs arg-specs)
-  (let ((param-list
-	  (mapcar #'gmap>param arg-specs))
-	(result-list (gmap>res>init-clauses res-specs))
-	(let-specs (gmap>let-specs arg-specs res-specs)))
+  (let* ((driver-arg (position-if #'seventh arg-specs))
+	 (driver (and driver-arg (seventh (nth driver-arg arg-specs))))
+	 (arg-specs (if driver-arg
+			(let ((driver-spec (nth driver-arg arg-specs)))
+			  (append (subseq arg-specs 0 driver-arg)
+				  (cons `(:driver nil ,(third driver-spec) nil
+						  ,(fifth driver-spec))
+					(subseq arg-specs (1+ driver-arg)))))
+		      arg-specs))
+	 (param-list (mapcar #'gmap>param arg-specs))
+	 (result-list (gmap>res>init-clauses res-specs))
+	 (let-specs (gmap>let-specs arg-specs res-specs)))
     (let ((one-value-p (null (cdr result-list)))
 	  (multi-vars (mapcar #'gmap>param>multi-vars arg-specs))
 	  (fnval-vars (mapcan #'(lambda (res-spec)
@@ -87,36 +95,54 @@ an arg type expander (see `def-gmap-arg-type')."
 					       (nreverse vars))
 					   (list (gensym "VAR-"))))))
 			      res-specs)))
-      `(let ,let-specs
-	 (do (,@param-list
-	      ,@result-list)
-	     ((or ,@(apply #'append (mapcar #'gmap>param>exit-test	; exit test
-					    param-list arg-specs)))
-	      ,(gmap>res>cleanup res-specs result-list one-value-p))
-	   (let ,(reduce #'append
-			 (mapcar #'gmap>param>multi-let-specs
-				 param-list arg-specs multi-vars))
-	     ,(if (null fnval-vars)
-		  ;; Null result spec -- just call the function for effect.
-		  (apply #'gmap>funcall fn
-			 (reduce #'append
-				 (mapcar #'gmap>param>arg
-					 param-list arg-specs multi-vars)))
-		`(let ((,@fnval-vars
-			,(apply #'gmap>funcall fn
-				(reduce #'append
-					(mapcar #'gmap>param>arg
-						param-list arg-specs multi-vars)))))
-		   . ,(let ((setqs nil))
-			(do ((res-specs res-specs (cdr res-specs))
-			     (result-list result-list (cdr result-list)))
-			    ((null res-specs))
-			  (let ((next-exp fnvs
-				  (gmap>res>next (car res-specs) (caar result-list)
-						 fnval-vars)))
-			    (setq fnval-vars fnvs)
-			    (push `(setq ,(caar result-list) ,next-exp) setqs)))
-			(nreverse setqs))))))))))
+      `(let (,@let-specs
+	      (,@(reduce #'append
+			 (mapcar (lambda (clause arg-spec)
+				   (and (not (eq (car arg-spec) ':driver))
+					(list (list (first clause) (second clause)))))
+				 param-list arg-specs))
+		. ,result-list))
+	 (,@(if driver
+		`(,(first driver) (,@(or (nth driver-arg multi-vars)
+					 (list (car (nth driver-arg param-list))))
+				   ,@(rest driver)
+				   ,(gmap>res>cleanup res-specs result-list one-value-p)))
+	      '(loop))
+	  ,@(let ((exit-tests (apply #'append (mapcar #'gmap>param>exit-test
+						      param-list arg-specs))))
+	      (and exit-tests
+		   `((when (or . ,exit-tests)
+		       (return ,(gmap>res>cleanup res-specs result-list one-value-p))))))
+	  (let ,(reduce #'append
+			(mapcar #'gmap>param>multi-let-specs
+				param-list arg-specs multi-vars))
+	    ,(if (null fnval-vars)
+		 ;; Null result spec -- just call the function for effect.
+		 (apply #'gmap>funcall fn
+			(reduce #'append
+				(mapcar #'gmap>param>arg
+					param-list arg-specs multi-vars)))
+	       `(let ((,@fnval-vars
+		       ,(apply #'gmap>funcall fn
+			       (reduce #'append
+				       (mapcar #'gmap>param>arg
+					       param-list arg-specs multi-vars)))))
+		  . ,(let ((setqs nil))
+		       (do ((res-specs res-specs (cdr res-specs))
+			    (result-list result-list (cdr result-list)))
+			   ((null res-specs))
+			 (let ((next-exp fnvs
+				 (gmap>res>next (car res-specs) (caar result-list)
+						fnval-vars)))
+			   (setq fnval-vars fnvs)
+			   (push `(setq ,(caar result-list) ,next-exp) setqs)))
+		       (nreverse setqs)))))
+	  ,@(reduce #'append
+		    (mapcar (lambda (clause arg-spec)
+			      (and (not (eq (car arg-spec) ':driver))
+				   (third clause)
+				   `((setq ,(first clause) ,(third clause)))))
+			    param-list arg-specs)))))))
 
 
 ;;; extract the let-specs.
@@ -131,24 +157,22 @@ an arg type expander (see `def-gmap-arg-type')."
 	(nextfn (fourth arg-spec)))
     `(,param-name
       ,init
-      ,@(if nextfn
-	    `(,(gmap>funcall nextfn param-name))
-	    nil))))
+      ,@(and nextfn `(,(gmap>funcall nextfn param-name))))))
 
 ;;; get the argument to the function being mapped from the do-variable.
 (defun gmap>param>arg (param arg-spec multi-vars)
   (let ((param-name (first param))
 	(argfn (third arg-spec)))
     (or multi-vars
+	(and (eq (car arg-spec) ':driver) (list param-name))
 	`(,(gmap>funcall argfn param-name)))))
 
 ;;; get the exit test for the variable.
 (defun gmap>param>exit-test (param arg-spec)
   (let ((param-name (first param))
-	(exitp (second arg-spec)))
-    (if exitp
-	`(,(gmap>funcall exitp param-name))
-	nil)))
+	(exitp (and (not (eq (car arg-spec) ':driver))
+		    (second arg-spec))))
+    (and exitp `(,(gmap>funcall exitp param-name)))))
 
 (defun gmap>param>multi-vars (arg-spec)
   (let ((argfn (third arg-spec)))
@@ -162,15 +186,16 @@ an arg type expander (see `def-gmap-arg-type')."
 
 (defun gmap>param>multi-let-specs (param arg-spec multi-vars)
   (let ((argfn (third arg-spec)))
-    (and multi-vars
+    (and multi-vars (not (eq (car arg-spec) ':driver))
 	 `((,@multi-vars ,(gmap>funcall (third argfn) (first param)))))))
 
 ;;; get the initial value of the result.
 (defun gmap>res>init-clauses (res-specs)
-  (mapcan #'(lambda (res-spec)
-	      (and res-spec (cons (list (gensym "VAR-") (first res-spec))
-				  nil)))
-	  res-specs))
+  (reduce #'append
+	  (mapcar #'(lambda (res-spec)
+		      (and res-spec
+			   (list (list (gensym "VAR-") (first res-spec)))))
+		  res-specs)))
 
 ;;; compute the next value of the result from the current one and the
 ;;; current value of the function.
