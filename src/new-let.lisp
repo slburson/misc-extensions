@@ -141,7 +141,7 @@ applies to the inner one."
 			   (expand (cdr clauses) (append next-level (car clauses))
 				   pending-clauses final-clauses body decls)
 			 (error "Invalid ~A binding clause: ~S" mode (car clauses))))
-		      ((cddar clauses)
+		      ((and (listp (car clauses)) (cddar clauses))
 		       (cl:let ((mvb-vars (butlast (car clauses))))
 			 (if (and (null (cdr clauses)) (null next-level)
 				  (null pending-clauses) (null final-clauses))
