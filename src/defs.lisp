@@ -25,7 +25,7 @@
   (:export #:gmap #:def-gmap-arg-type #:def-arg-type #:def-gmap-res-type #:def-result-type
 	   #:copy-gmap-type #:def-arg-type-synonym #:def-result-type-synonym
 	   ;; Predefined argument and result type names that aren't inherited from `cl:'.
-	   #:constant #:index #:index-inc #:alist #:plist #:sum #:product)
+	   #:constant #:index #:index-inc #:alist #:plist #:sum #:product #:file-lines)
   (:shadowing-import-from :new-let #:let #:cond))
 ;;; Instead of `(:use :gmap)', I recommend that clients do `(:import-from :gmap #:gmap)',
 ;;; adding to the import list any of the predefined argument and result type names that

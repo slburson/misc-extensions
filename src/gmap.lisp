@@ -236,6 +236,8 @@ an arg type expander (see `def-gmap-arg-type')."
 	  ((and (listp function)
 		(eq (car function) 'lambda))
 	   `(,function . ,args))
+	  ((and (listp function) (eq (car function) 'fn))
+	   (apply #'gmap>funcall (macroexpand function) args))
 	  (t `(funcall ,function . ,args)))))
 
 
@@ -785,6 +787,44 @@ at each step."
        ,@(and incr `((,incr-temp (the fixnum ,incr))))
        ((,stop-temp (the fixnum ,(if stop `(min ,stop (array-total-size ,ary-temp))
 				   `(array-total-size ,ary-temp)))))))))
+
+(def-arg-type file-chars (pathname &key (element-type 'character) (external-format ':default))
+  "Yields the characters of the file named by `pathname'.  `element-type' and
+`external-format' are passed to `open'."
+  (let ((stream-tmp (gensym "STREAM-"))
+	(char-tmp (gensym "CHAR-")))
+    `(nil
+       (fn (_)
+	 (setq ,char-tmp (read-char ,stream-tmp nil nil))
+	 (null ,char-tmp))
+       (fn (_) ,char-tmp)
+       nil
+       ((,char-tmp nil))
+       ,(fn (expansion)
+	  `(with-open-file (,stream-tmp ,pathname :element-type ,element-type :external-format ,external-format)
+	     ,expansion)))))
+
+(def-arg-type file-lines (pathname &key skip-initial (external-format ':default))
+  "Yields the lines of the file named by `pathname'.  If `skip-initial' is
+given, it is the number of initial lines to skip.  `external-format' is
+passed to `open'."
+  (let ((stream-tmp (gensym "STREAM-"))
+	(line-tmp (gensym "LINE-")))
+    `(nil
+       (fn (_)
+	 ,(if skip-initial
+	      `(do ((n ,skip-initial (1- n)))
+		   ((zerop n)
+		    (setq ,line-tmp (read-line ,stream-tmp nil nil)))
+		 (read-line ,stream-tmp nil nil))
+	    `(setq ,line-tmp (read-line ,stream-tmp nil nil)))
+	 (null ,line-tmp))
+       (fn (_) ,line-tmp)
+       nil
+       ((,line-tmp nil))
+       ,(fn (expansion)
+	  `(with-open-file (,stream-tmp ,pathname :external-format ,external-format)
+	     ,expansion)))))
 
 
 ;;; ******** Predefined result types ********
