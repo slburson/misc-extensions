@@ -308,11 +308,11 @@ of the list.
 
 - `file-chars` _pathname_ &key _element-type external-format_: Yields the
   characters of the file named by `pathname`.  `element-type` and
-  `external-format`, if supplied, are passed to `open'.
+  `external-format`, if supplied, are passed to `open`.
 
 - `file-lines` _pathname_ &key _skip-initial external-format_: Yields the lines
-  of the file named by `pathname'.  If `skip-initial' is given, it is the number
-  of initial lines to skip.  `external-format', if supplied, is passed to `open'.
+  of the file named by `pathname`.  If `skip-initial` is given, it is the number
+  of initial lines to skip.  `external-format`, if supplied, is passed to `open`.
 
 ### 2.3. Result types
 
