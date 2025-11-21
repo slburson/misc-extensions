@@ -788,7 +788,7 @@ at each step."
        ((,stop-temp (the fixnum ,(if stop `(min ,stop (array-total-size ,ary-temp))
 				   `(array-total-size ,ary-temp)))))))))
 
-(def-arg-type file-chars (pathname &key (element-type 'character) (external-format ':default))
+(def-arg-type file-chars (pathname &key (element-type ''character) (external-format '':default))
   "Yields the characters of the file named by `pathname'.  `element-type' and
 `external-format' are passed to `open'."
   (let ((stream-tmp (gensym "STREAM-"))
@@ -804,7 +804,7 @@ at each step."
 	  `(with-open-file (,stream-tmp ,pathname :element-type ,element-type :external-format ,external-format)
 	     ,expansion)))))
 
-(def-arg-type file-lines (pathname &key skip-initial (external-format ':default))
+(def-arg-type file-lines (pathname &key skip-initial (external-format '':default))
   "Yields the lines of the file named by `pathname'.  If `skip-initial' is
 given, it is the number of initial lines to skip.  `external-format' is
 passed to `open'."
