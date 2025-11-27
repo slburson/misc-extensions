@@ -95,54 +95,54 @@ an arg type expander (see `def-gmap-arg-type')."
 					       (nreverse vars))
 					   (list (gensym "VAR-"))))))
 			      res-specs)))
-      `(let (,@let-specs
-	      (,@(reduce #'append
+      `(let ,let-specs
+	 (let (,@(reduce #'append
 			 (mapcar (lambda (clause arg-spec)
 				   (and (not (eq (car arg-spec) ':driver))
 					(list (list (first clause) (second clause)))))
 				 param-list arg-specs))
-		. ,result-list))
-	 (,@(if driver
-		`(,(first driver) (,@(or (nth driver-arg multi-vars)
-					 (list (car (nth driver-arg param-list))))
-				   ,@(rest driver)
-				   ,(gmap>res>cleanup res-specs result-list one-value-p)))
-	      '(loop))
-	  ,@(let ((exit-tests (apply #'append (mapcar #'gmap>param>exit-test
-						      param-list arg-specs))))
-	      (and exit-tests
-		   `((when (or . ,exit-tests)
-		       (return ,(gmap>res>cleanup res-specs result-list one-value-p))))))
-	  (let ,(reduce #'append
-			(mapcar #'gmap>param>multi-let-specs
-				param-list arg-specs multi-vars))
-	    ,(if (null fnval-vars)
-		 ;; Null result spec -- just call the function for effect.
-		 (apply #'gmap>funcall fn
-			(reduce #'append
-				(mapcar #'gmap>param>arg
-					param-list arg-specs multi-vars)))
-	       `(let ((,@fnval-vars
-		       ,(apply #'gmap>funcall fn
-			       (reduce #'append
-				       (mapcar #'gmap>param>arg
-					       param-list arg-specs multi-vars)))))
-		  . ,(let ((setqs nil))
-		       (do ((res-specs res-specs (cdr res-specs))
-			    (result-list result-list (cdr result-list)))
-			   ((null res-specs))
-			 (let ((next-exp fnvs
-				 (gmap>res>next (car res-specs) (caar result-list)
-						fnval-vars)))
-			   (setq fnval-vars fnvs)
-			   (push `(setq ,(caar result-list) ,next-exp) setqs)))
-		       (nreverse setqs)))))
-	  ,@(reduce #'append
-		    (mapcar (lambda (clause arg-spec)
-			      (and (not (eq (car arg-spec) ':driver))
-				   (third clause)
-				   `((setq ,(first clause) ,(third clause)))))
-			    param-list arg-specs)))))))
+	       . ,result-list)
+	   (,@(if driver
+		  `(,(first driver) (,@(or (nth driver-arg multi-vars)
+					   (list (car (nth driver-arg param-list))))
+				     ,@(rest driver)
+				     ,(gmap>res>cleanup res-specs result-list one-value-p)))
+		'(loop))
+	    ,@(let ((exit-tests (apply #'append (mapcar #'gmap>param>exit-test
+							param-list arg-specs))))
+		(and exit-tests
+		     `((when (or . ,exit-tests)
+			 (return ,(gmap>res>cleanup res-specs result-list one-value-p))))))
+	    (let ,(reduce #'append
+			  (mapcar #'gmap>param>multi-let-specs
+				  param-list arg-specs multi-vars))
+	      ,(if (null fnval-vars)
+		   ;; Null result spec -- just call the function for effect.
+		   (apply #'gmap>funcall fn
+			  (reduce #'append
+				  (mapcar #'gmap>param>arg
+					  param-list arg-specs multi-vars)))
+		 `(let ((,@fnval-vars
+			  ,(apply #'gmap>funcall fn
+				  (reduce #'append
+					  (mapcar #'gmap>param>arg
+						  param-list arg-specs multi-vars)))))
+		    . ,(let ((setqs nil))
+			 (do ((res-specs res-specs (cdr res-specs))
+			      (result-list result-list (cdr result-list)))
+			     ((null res-specs))
+			   (let ((next-exp fnvs
+				   (gmap>res>next (car res-specs) (caar result-list)
+						  fnval-vars)))
+			     (setq fnval-vars fnvs)
+			     (push `(setq ,(caar result-list) ,next-exp) setqs)))
+			 (nreverse setqs)))))
+	    ,@(reduce #'append
+		      (mapcar (lambda (clause arg-spec)
+				(and (not (eq (car arg-spec) ':driver))
+				     (third clause)
+				     `((setq ,(first clause) ,(third clause)))))
+			      param-list arg-specs))))))))
 
 
 ;;; extract the let-specs.
@@ -794,15 +794,15 @@ at each step."
   (let ((stream-tmp (gensym "STREAM-"))
 	(char-tmp (gensym "CHAR-")))
     `(nil
-       (fn (_)
-	 (setq ,char-tmp (read-char ,stream-tmp nil nil))
-	 (null ,char-tmp))
-       (fn (_) ,char-tmp)
-       nil
-       ((,char-tmp nil))
-       ,(fn (expansion)
-	  `(with-open-file (,stream-tmp ,pathname :element-type ,element-type :external-format ,external-format)
-	     ,expansion)))))
+      (fn (_)
+	(setq ,char-tmp (read-char ,stream-tmp nil nil))
+	(null ,char-tmp))
+      (fn (_) ,char-tmp)
+      nil
+      ((,char-tmp nil))
+      ,(fn (expansion)
+	 `(with-open-file (,stream-tmp ,pathname :element-type ,element-type :external-format ,external-format)
+	    ,expansion)))))
 
 (def-arg-type file-lines (pathname &key skip-initial (external-format '':default))
   "Yields the lines of the file named by `pathname'.  If `skip-initial' is
@@ -811,20 +811,20 @@ passed to `open'."
   (let ((stream-tmp (gensym "STREAM-"))
 	(line-tmp (gensym "LINE-")))
     `(nil
-       (fn (_)
-	 ,(if skip-initial
-	      `(do ((n ,skip-initial (1- n)))
-		   ((zerop n)
-		    (setq ,line-tmp (read-line ,stream-tmp nil nil)))
-		 (read-line ,stream-tmp nil nil))
-	    `(setq ,line-tmp (read-line ,stream-tmp nil nil)))
-	 (null ,line-tmp))
-       (fn (_) ,line-tmp)
-       nil
-       ((,line-tmp nil))
-       ,(fn (expansion)
-	  `(with-open-file (,stream-tmp ,pathname :external-format ,external-format)
-	     ,expansion)))))
+      (fn (_)
+	,(if skip-initial
+	     `(do ((n ,skip-initial (1- n)))
+		  ((zerop n)
+		   (setq ,line-tmp (read-line ,stream-tmp nil nil)))
+		(read-line ,stream-tmp nil nil))
+	   `(setq ,line-tmp (read-line ,stream-tmp nil nil)))
+	(null ,line-tmp))
+      (fn (_) ,line-tmp)
+      nil
+      ((,line-tmp nil))
+      ,(fn (expansion)
+	 `(with-open-file (,stream-tmp ,pathname :external-format ,external-format)
+	    ,expansion)))))
 
 
 ;;; ******** Predefined result types ********
