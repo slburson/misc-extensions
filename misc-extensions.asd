@@ -3,7 +3,7 @@
 (defsystem Misc-Extensions
   :description "The GMap iteration macro, plus a few other useful macros."
   :author "Scott L. Burson <Scott@sympoiesis.com>"
-  :version "4.2.2"
+  :version "4.2.3"
   :homepage "https://github.com/slburson/misc-extensions"
   :source-control "https://github.com/slburson/misc-extensions"
   :license "Public domain"
@@ -12,8 +12,8 @@
 		:serial t
 		:components ((:file "defs")
 			     (:file "new-let")
-			     (:file "gmap")
 			     (:file "fn")
+			     (:file "gmap")
 			     (:file "tests")
 			     (:file "rev-fun-bind")
 			     (:file "define-class")
