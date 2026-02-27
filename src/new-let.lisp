@@ -306,16 +306,18 @@ second value is `body' with the declarations stripped off."
 
   ;; The only implementation on which I've observed it not to work is ABCL.  The spec does say
   ;; that the consequences of calling `typep' on a non-type-specifier are undefined.  Sigh.
-  ;; This has no way to find types defined by `deftype'.
+  ;; -- I found a workaround for ABCL.  On others, this has no way to find types defined by `deftype'.
   #-(or sbcl ccl ecl clasp allegro lispworks)
-  (or (member x '(array atom bignum bit bit-vector character compiled-function
-		  complex cons double-float extended-char fixnum float function
-		  hash-table integer keyword list long-float nil null number
-		  package pathname random-state ratio rational real readtable
-		  sequence short-float simple-array simple-bit-vector
-		  simple-string simple-vector single-float standard-char stream
-		  string base-char symbol t vector))
-      (find-class x nil)))
+  (cl:let ((x (if (listp x) (car x) x)))
+    (or (member x '(array atom bignum bit bit-vector boolean character compiled-function
+		    complex cons double-float extended-char fixnum float function
+		    hash-table integer keyword list long-float nil null number
+		    package pathname random-state ratio rational real readtable
+		    sequence short-float simple-array simple-bit-vector
+		    simple-string simple-vector single-float standard-char stream
+		    string base-char symbol t vector))
+	#+abcl (get x 'system::deftype-definition)
+	(find-class x nil))))
 
 
 (defmacro cond (&rest clauses)

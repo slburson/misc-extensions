@@ -26,7 +26,7 @@ variables to be bound to the values of the init-form.
 The two that I expect most people will want to use are `mvlet` and `mvlet*`.
 `mvlet`, like `cl:let`, makes all bindings in parallel, so the init-forms can
 refer to variables of the same names in the containing scope.  `mvlet*`, like
-`c:let*`, makes them sequentially, so each init-form can refer to any of the
+`cl:let*`, makes them sequentially, so each init-form can refer to any of the
 variables bound in the preceding clauses.  Except for being able to bind
 multiple values, they are almost perfectly upward-compatible with the CL
 operators, with a minor caveat I will return to below.
@@ -95,17 +95,8 @@ for `g` could refer to `h`, since the latter is bound one level out.
 
 The macros correctly handle `declare` forms at the beginning of the body,
 emitting the declarations at the correct level within the expansion so that they
-apply to the binding named.  — Well, almost.  In order to do that, they have to
-be able to detect type declarations, which can start with a type name rather
-than the symbol `type`; and as it turns, out, CL has no portable interface for
-determining whether a symbol is a type name.  (You can find out whether it's a
-_class_ using `find-class`, but there's no portable way to tell whether a symbol
-has been `deftype`d.)  There is a hackish way to do it that works on SBCL,
-Clozure (CCL), ECL, CLASP, Franz Allegro, and LispWorks, but not, as of this
-writing, on ABCL.  On ABCL, the macros use a heuristic that could fail, but
-which I doubt will ever fail in practice.  But, if you want to avoid any risk of
-error, start your type declarations with the symbol `type` if the type is
-user-defined.
+apply to the binding named.  (If there are multiple bindings of the same name,
+any declarations on that name apply only to the innermost one.)
 
 The symbol `nlet` is exported from package `new-let`.  It also exports the same
 macro under the name `let`, so that it can shadow `cl:let`; this is how I use
@@ -147,9 +138,9 @@ that the question was rooted in experience of people using `loop` or other
 iteration constructs and supplying variable update expressions with side
 effects, so that there was "crosswise" data flow between the iterations.  I
 strongly advise that such side effects be avoided in `gmap` calls.  If you find
-yourself wanting to use them, either there is a better way (more on this below),
-or else `gmap` simply isn't the right tool for the job.  In short, you should
-think of `gmap` very much as a _functional_ iteration construct.
+yourself wanting to use them, most likely `gmap` simply isn't the right tool for
+the job (maybe `reduce` would work better).  In short, you should think of
+`gmap` very much as a _functional_ iteration construct.
 
 In general, my philosophy about iteration in Lisp is that there are many ways to
 do it, for the very good reason that there are many kinds of iterations, and one
@@ -358,10 +349,7 @@ For example:
 
 Additionally, there is a `:consume` feature that allows a single reduction to
 consume multiple values from the function being mapped; see the source for
-details.  — Earlier, I promised a "better way" (search for that phrase) to
-handle cases where you need cross-iteration data flow.  The use of multiple
-values and `:consume` can solve many of these problems without dirtying your
-code with side effects.
+details.
 
 
 #### 2.2.1. Predefined result types
@@ -588,7 +576,7 @@ indentation.
 
 There are also `rflet` and `rmacrolet`, but I don't think I've ever used them.
 
-## 7. Succinct class definitions with `define-class`
+## 8. Succinct class definitions with `define-class`
 
 As everyone knows, `defclass` forms tend to be rather verbose and repetitive:
 
@@ -599,9 +587,8 @@ As everyone knows, `defclass` forms tend to be rather verbose and repetitive:
        :documentation "The color of the frob.")
      (height :initarg :height :accessor frob-height
        :initform 3.0
-       :documentation "The height of the frob in cm.")
-     ...)
-  (:documentation "The class of all frobs.")
+       :documentation "The height of the frob in cm."))
+  (:documentation "The class of all frobs."))
 ```
 
 I've written a `define-class` macro to shorten them.  It is completely upward
@@ -632,7 +619,9 @@ is more flexible.
   inserted.
 - Or, you can use `:doc` as an abbreviation for `:documentation`.
 
-So, here's the above example using `define-class`:
+So, here's the above example using `define-class`; 347 characters have
+been reduced to 186 — a 46% reduction — and I think it's actually
+easier to understand:
 
 ```common-lisp
 (define-class frob (widget)

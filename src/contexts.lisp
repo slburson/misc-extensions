@@ -287,9 +287,6 @@
 is taken as a documentation string.  In some implementations (e.g. Scieneer),
 locally rebinding the same name is not permitted; in most, it is permitted
 but creates a new lexical variable, with no effect on the global one."
-  ;; Scieneer has this built in (will give an error if you try to bind the var)
-  #+scl
-  `(ext:defgvar ,var ,@(and val? `(,val)) ,@(and doc `(,doc)))
   #+abcl
   ;; Work around ABCL limitation: a symbol macro name can't also have a
   ;; symbol-value.
@@ -301,7 +298,7 @@ but creates a new lexical variable, with no effect on the global one."
 			 (setf (symbol-value ',sym) ,val)))))
        (eval-when (:compile-toplevel :load-toplevel :execute)
 	 (define-symbol-macro ,var (symbol-value ',sym)))))
-  #-(or scl abcl)
+  #-abcl
   `(progn
      (eval-when (:load-toplevel :execute)
        ,@(and doc `((setf (documentation ',var 'variable) ',doc)))
@@ -317,11 +314,6 @@ but creates a new lexical variable, with no effect on the global one."
 implementations (e.g. Scieneer), locally rebinding the same name is not
 permitted; in most, it is permitted but creates a new lexical variable,
 with no effect on the global one."
-  ; Scieneer has this built in (will give an error if you try to bind the var)
-  #+scl
-  `(progn
-     (ext:defgvar ,var nil ,@(and doc `(,doc)))
-     (setq ,var ,val))
   #+abcl
   ;; Work around ABCL limitation: a symbol macro name can't also have a
   ;; symbol-value.
@@ -332,7 +324,7 @@ with no effect on the global one."
 	 (setf (symbol-value ',sym) ,val))
        (eval-when (:compile-toplevel :load-toplevel :execute)
 	 (define-symbol-macro ,var (symbol-value ',sym)))))
-  #-(or scl abcl)
+  #-abcl
   `(progn
      (eval-when (:load-toplevel :execute)
        ,@(and doc `((setf (documentation ',var 'variable) ',doc)))
