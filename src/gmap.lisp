@@ -76,7 +76,7 @@ an arg type expander (see `def-gmap-arg-type')."
 			(let ((driver-spec (nth driver-arg arg-specs)))
 			  (append (subseq arg-specs 0 driver-arg)
 				  (cons `(:driver nil ,(third driver-spec) nil
-						  ,(fifth driver-spec))
+						  ,(eighth driver-spec))
 					(subseq arg-specs (1+ driver-arg)))))
 		      arg-specs))
 	 (param-list (mapcar #'gmap>param arg-specs))

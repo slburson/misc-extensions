@@ -241,7 +241,7 @@ of the list.
 - `alist` _alist_: Yields, as two values, the successive pairs of `alist`.
 
 - `plist` _plist_: Yields, as two values, the successive pairs of elements of
-  `plist'; that is, there is one iteration for each two elements.
+  `plist`; that is, there is one iteration for each two elements.
 
 - `hash-table` _table_: Yields, as two values, the successive pairs of `table`.
   (Warning: the ordering of pairs is Lisp-implementation-dependent and should not
@@ -250,7 +250,7 @@ of the list.
 - `tails` _list_: Yields the successive tails (cdrs) of `list`, starting with
   `list` itself, which may be improper.
 
-- `index` _start_ &optional _stop_ &key _incr fixnums?_: Yields integers in the
+- `index` &optional _start_ _stop_ &key _incr fixnums?_: Yields integers in the
   interval [`start`, `stop`) if `incr` (which defaults to 1) is positive; or in
   the interval [`stop`, `start`) if `incr` is negative.  Specifically, in the
   upward case, the values begin with `start` and increase by `incr` until >=
@@ -268,7 +268,7 @@ of the list.
   sequence.
 
 - `exp` _initial-value base_: Yields an exponential sequence whose first value
-   is _initial-value_, and whose value is multiplied by _base_ on each
+   is `initial-value`, and whose value is multiplied by `base` on each
    iteration.
 
 - `vector` _vec_ &key _start stop incr_: Yields elements of vector `vec`.  `start`
@@ -382,7 +382,7 @@ details.
   `values`.  (Generalizes `cl:every`.)
   
 - `or`: If one of the values is true, terminates the iteration and returns it;
-  otherwise, returns false.  Does not work as an operand of `:values`.
+  otherwise, returns false.  Does not work as an operand of `values`.
   (Generalizes `cl:some`.)
 
 - `sum` &key _filterp_: Returns the sum of the values, optionally filtered by
