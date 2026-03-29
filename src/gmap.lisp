@@ -58,8 +58,15 @@ or a list whose car is `nil' and whose cdr has the same form as the value of
 an arg type expander (see `def-gmap-arg-type')."
   (unless arg-specs
     (error "At least one argument spec is required."))
-  (let ((arg-specs (mapcar #'gmap>arg-spec-lookup arg-specs))
+  (let ((arg-specs-orig arg-specs)
+	(arg-specs (mapcar #'gmap>arg-spec-lookup arg-specs))
 	((result (gmap>expand fn (gmap>res-spec-lookup res-spec) arg-specs))))
+    ;; Catch arg type defs that have a driver and let-specs, but haven't added separate
+    ;; let-specs for the driver yet.
+    (mapc (lambda (arg-spec arg-spec-orig)
+	    (when (and (seventh arg-spec) (fifth arg-spec) (< (length arg-spec) 8))
+	      (error "Driver with no let-specs: ~A" arg-spec-orig)))
+	  arg-specs arg-specs-orig)
     (reduce (lambda (expansion arg-spec)
 	      (let ((wrapper-fn (sixth arg-spec)))
 		(if wrapper-fn (funcall wrapper-fn expansion)
