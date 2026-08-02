@@ -36,7 +36,16 @@ Example:
     ((top-color :constant
        \"The color of the top.\")
      ((top-state ':up) :variable
-       \"The current state of the top, `:down' or `:up'.\")))"
+       \"The current state of the top, `:down' or `:up'.\")))
+
+Additionally, if class option `:enforce-slot-types' has a true value, the macro
+emits code to check the values assigned to slots which have a `:type' option.
+This is done with an `:after' method on `initialize-instance', and `:before'
+methods on the `(setf <writer>)' function for each slot writer/accessor; be
+aware that if you define such methods yourself, they will conflict, with the
+most recently compiled taking effect.  Also, this option is useful on SBCL,
+ABCL, ECL, Allegro CL, and LispWorks; but it has no effect on Clozure CL (CCL),
+which enforces standard-class slot types itself."
   (when (stringp slot-specs)
     (let ((class-doc slot-specs))
       (setq slot-specs (pop class-options))
@@ -44,6 +53,7 @@ Example:
   (let* ((conc-name (let ((pr (assoc ':conc-name class-options)))
 		      (and pr (string (cadr pr)))))
 	 (extension-data nil)
+	 (slot-types nil)
 	 (expanded-slot-specs
 	   (mapcar (lambda (slot-spec)
 		      (if (symbolp slot-spec) (list slot-spec slot-spec)
@@ -67,6 +77,9 @@ Example:
 								 :initform :type))
 					    (when (eq (car spec) ':initform)
 					      (setq initform? t))
+					    (when (eq (car spec) ':type)
+					      (push (list slot-name (cadr spec) (gensym (string slot-name)))
+						    slot-types))
 					    (walk (cddr spec) (list* (car spec) (cadr spec) result)))
 					   ((stringp (car spec))
 					    (walk (cdr spec) (list* ':documentation (remove-indentation (car spec))
@@ -113,15 +126,37 @@ Example:
     `(progn
        (defclass ,class-name ,superclasses
 	   ,(mapcar (lambda (x) (cons (first x) (third x))) expanded-slot-specs)
-	 . ,(remove-if (lambda (x) (member (car x) '(:conc-name :predicate))) class-options))
+	 . ,(remove-if (lambda (x) (member (car x) '(:conc-name :predicate :enforce-slot-types))) class-options))
        ,@(let ((pr (assoc ':predicate class-options)))
 	   (and pr `((defun ,(cadr pr) (x) (typep x ',class-name)))))
-       . ,(reduce #'append
-		  (mapcar (lambda (pr)
-			    (mapcar (lambda (ext-fn)
-				      (funcall ext-fn class-name (reverse (cdr pr)) expanded-slot-specs))
-				    (get (car pr) 'define-class-extensions)))
-			  extension-data)))))
+       ;; CCL does this without being asked.  SBCL, ABCL, ECL, Allegro, and LispWorks do not.
+       #-ccl
+       ,@(and slot-types (cadr (assoc ':enforce-slot-types class-options))
+	      (let ((slot-types-plus (mapcar (lambda (slot-type)
+					       (let* ((slot-spec (assoc (first slot-type) expanded-slot-specs))
+						      (initarg (getf (third slot-spec) ':initarg))
+						      (writer (or (getf (third slot-spec) ':writer)
+								  (getf (third slot-spec) ':accessor))))
+						 (append slot-type (list initarg writer))))
+					     (reverse slot-types))))
+		`((defmethod initialize-instance :after ((,class-name ,class-name) &key)
+		    . ,(mapcar (lambda (slot-type)
+				 `(when (slot-boundp ,class-name ',(first slot-type))
+				    (check-type (slot-value ,class-name ',(first slot-type)) ,(second slot-type))))
+			       slot-types-plus))
+		  . ,(mapcan (lambda (slot-type)
+			       (let* ((writer (fifth slot-type)))
+				 (and writer
+				      `((defmethod (setf ,writer) :before (,(first slot-type) (x ,class-name))
+					  (check-type ,(first slot-type) ,(second slot-type)))))))
+			     slot-types-plus))))
+       ,@(reduce #'append
+		 (mapcar (lambda (pr)
+			   (mapcar (lambda (ext-fn)
+				     (funcall ext-fn class-name (reverse (cdr pr)) expanded-slot-specs))
+				   (get (car pr) 'define-class-extensions)))
+			 extension-data))
+       ',class-name)))
 
 (defun add-define-class-extension (option ext-fn)
   "Adds a keyword slot option to `define-class'.  `option' should be a
@@ -133,10 +168,9 @@ original slot-spec and (b) the expanded slot-spec that will be passed to
 `defclass'."
   (pushnew ext-fn (get option 'define-class-extensions)))
 
-;;; For `remove-indentation' to work correctly in the presence of tabs, it needs
-;;; to know how wide they are.  If you use tabs at all -- many don't -- and set
-;;; them to a different width, you'll want to change this.  Be aware that it takes
-;;; effect at compile time.
+;;; For `remove-indentation' to work correctly in the presence of tabs, it needs to know
+;;; how wide they are.  If you use tabs, but you set them to a different width, you'll
+;;; want to change this.
 (defparameter *tab-width* 8)
 
 (defun remove-indentation (str)

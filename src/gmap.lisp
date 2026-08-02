@@ -390,7 +390,7 @@ This is the backward-compatibility version of this macro; when `name' is not
 in the keyword package, it also tries to identically define the keyword symbol
 of the same name, though it checks for collisions first.  If a collision does
 occur, you can resolve it by changing at least one of the `def-gmap-res-type'
-forms to `def-res-type', which does not attempt to define the keyword version
+forms to `def-result-type', which does not attempt to define the keyword version
 of the name.  Of course, you will also need to update any references in the
 old syntax `(:name ...)' to the new syntax `(:result name ...)'."
   (let ((fn-name (or (get name 'res-type-expander)
@@ -446,7 +446,7 @@ FN)', FN should be a function of N + 1 arguments, and will receive N values
 from the function being mapped."
   (let ((fn-name (gensym "RES-TYPE-EXPANDER-")))
     (when (eq (symbol-package name) (find-package "KEYWORD"))
-      (error "def-res-type ~S: the use of keyword names with gmap:def-res-type is~@
+      (error "def-result-type ~S: the use of keyword names with gmap:def-result-type is~@
 	     not permitted.  Use a name in the package that defines the type you~@
 	     wish to iterate over.  If you need to define the keyword name for~@
 	     backward compatibility, use `def-gmap-res-type'."
@@ -833,6 +833,22 @@ passed to `open'."
 	 `(with-open-file (,stream-tmp ,pathname :external-format ,external-format)
 	    ,expansion)))))
 
+(def-arg-type file-sexps (pathname &key (external-format '':default))
+  "Yields the s-expressions of the file named by `pathname'.  `external-format'
+is passed to `open'."
+  (let ((stream-tmp (gensym "STREAM-"))
+	(sexp-tmp (gensym "CHAR-")))
+    `(nil
+      (fn (_)
+	(setq ,sexp-tmp (read ,stream-tmp nil nil))
+	(null ,sexp-tmp))
+      (fn (_) ,sexp-tmp)
+      nil
+      ((,sexp-tmp nil))
+      ,(fn (expansion)
+	 `(with-open-file (,stream-tmp ,pathname :external-format ,external-format)
+	    ,expansion)))))
+
 
 ;;; ******** Predefined result types ********
 
@@ -912,6 +928,16 @@ otherwise, returns false.  Does not work as an operand of `:values'."
   "Returns the product of the values, optionally filtered by `filterp'
 \(`filterp' can be `:id' to filter out `nil'\)."
   `(1 #'* nil ,filterp))
+
+(def-result-type logior (&key filterp)
+  "Returns the bitwise-OR of the values, optionally filtered by `filterp'
+\(`filterp' can be `:id' to filter out `nil'\)."
+  `(0 #'logior nil ,filterp))
+
+(def-result-type logand (&key filterp)
+  "Returns the bitwise-AND of the values, optionally filtered by `filterp'
+\(`filterp' can be `:id' to filter out `nil'\)."
+  `(0 #'logand nil ,filterp))
 
 (def-gmap-res-type count ()
   "Returns the number of true values."

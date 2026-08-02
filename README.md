@@ -305,6 +305,10 @@ of the list.
   of the file named by `pathname`.  If `skip-initial` is given, it is the number
   of initial lines to skip.  `external-format`, if supplied, is passed to `open`.
 
+- `file-sexps` _pathname_ &key _external-format_: Yields the s-expressions of
+  the file named by `pathname`.  `external-format`, if supplied, is passed to
+  `open`.
+
 ### 2.3. Result types
 
 GMap, unlike `mapcar`, has the ability to perform arbitrary reductions on the
@@ -389,6 +393,12 @@ details.
   `filterp` (which can be `:id` to filter out `nil`).
 
 - `product` &key _filterp_: Returns the product of the values, optionally
+  filtered by `filterp` (which can be `:id` to filter out `nil`).
+
+- `logior` &key _filterp_: Returns the bitwise-OR of the values, optionally
+  filtered by `filterp` (which can be `:id` to filter out `nil`).
+
+- `logand` &key _filterp_: Returns the bitwise-AND of the values, optionally
   filtered by `filterp` (which can be `:id` to filter out `nil`).
 
 - `count`: Returns the number of true values.
@@ -597,7 +607,7 @@ compatible with `defclass`; you could just replace `defclass` with
 But `define-class` provides several features to make the definition more
 succinct.  Use only the ones you like!  The big change is that where `defclass`
 slot descriptions have a strict alternating keyword-value syntax, `define-class`
-is more flexible.
+is more flexible, with several keywords that are not followed by values.
 
 - A doc string for the class can be placed just before the slot specs (visually
   similar to where doc strings for functions go).
@@ -613,8 +623,8 @@ is more flexible.
   name.
 - Additionally, `:constant` is an abbreviation for `:must-init :readable`
   if the spec contains no initform, or `:may-init :readable` if there is
-  an initform (in either syntax)
-- And `:variable` is an abbreviation for `:may-init :accessible`
+  an initform (in either syntax).
+- Similarly, `:variable` is an abbreviation for `:may-init :accessible`.
 - A doc string can appear anywhere in the slot options; `:documentation` will be
   inserted.
 - Or, you can use `:doc` as an abbreviation for `:documentation`.
@@ -635,6 +645,18 @@ Let me emphasize, you can still use the `defclass` slot options in any case
 where the above features do not do what you want; for instance, if you want a
 different reader/accessor name for a particular slot than what `define-class`
 would have used.
+
+Additionally, if class option `:enforce-slot-types` has a true value, the macro
+emits code to check the values assigned to slots which have a `:type` option.
+
+- This is done with an `:after` method on `initialize-instance`, and `:before`
+methods on the `(setf <writer>)' function for each slot writer/accessor; be
+aware that if you define such methods yourself, they will conflict, with the
+most recently compiled taking effect.
+
+- Also, this option is useful on SBCL, ABCL, ECL, Allegro CL, and LispWorks; but
+it has no effect on Clozure CL (CCL), which enforces standard-class slot types
+itself.
 
 BTW, for GNU Emacs users, if you look at the bottom of `src/define-class.lisp`,
 you will see an Emacs patch that will improve the fontification of
